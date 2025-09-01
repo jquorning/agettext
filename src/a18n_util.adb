@@ -21,5 +21,22 @@ package body A18n_Util is
       return Line & ":" & Col_Start & ".." & Col_End;
    end Location_Of;
 
+   --------------
+   -- Un_Quote --
+   --------------
+
+   function Un_Quote (Item : String) return String is
+   begin
+      return Item (Item'First + 1 .. Item'Last - 1);
+   end Un_Quote;
+
+   -----------
+   -- Quote --
+   -----------
+
+   function Quote (Item : String) return String is
+   begin
+      return """" & Item & """";
+   end Quote;
 
 end A18n_Util;

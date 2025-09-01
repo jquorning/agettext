@@ -63,10 +63,10 @@ is
    begin
       while Iter.Next (Node) loop
          case Node.Kind is
-         when Ada_Call_Expr      => A18n_Analysis.Analyze_Call_Expr (Node);
-         when Ada_Un_Op          => A18n_Analysis.Analyze_Un_Op     (Node);
+         when Ada_Call_Expr => A18n_Analysis.Analyze_Call_Expr (Node, Filename);
+         when Ada_Un_Op     => A18n_Analysis.Analyze_Un_Op     (Node, Filename);
 --         when Ada_String_Literal => Analyze_Un_Op     (Node);
-         when others             => null;
+         when others        => null;
          end case;
       end loop;
 --      Predic  : constant Ada_Node_Predicate := Kind_Is (Ada_Call_Expr);
@@ -266,6 +266,8 @@ begin
    Check_Driver;
    Check_Project;
    Check_Output;
+
+--   POT.Put_Entry ("a18n_main.adb", 117, "Hello, World!", "Test");
 
    Analyze_Project (Command_Line.Project.all);
 

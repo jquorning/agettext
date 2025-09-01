@@ -46,7 +46,7 @@ is
    begin
       Put_Line (File, "");
       Put_Line (File, "#: " & Source_Name &
-                      ": " & Fixed.Trim (Line_Number'Image, Left));
+                      ":" & Fixed.Trim (Line_Number'Image, Left));
       if Comment /= "" then
          Put_Line (File, "#  " & Comment);
       end if;
