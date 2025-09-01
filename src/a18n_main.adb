@@ -25,8 +25,6 @@ procedure A18n_Main
 is
    use Ada.Text_IO;
 
-   Program_Termination : exception;
-
    procedure Analyze_File      (Filename : String);
    procedure Analyze_Project   (Project_File : String);
 
@@ -43,6 +41,8 @@ is
       Version   : aliased Boolean := False;
 
       procedure Parse;
+      procedure Display_Help;
+      procedure Free;
 
    end Command_Line;
 
@@ -103,11 +103,15 @@ is
 
       Projs := Libadalang.Project_Provider.Create_Project_Unit_Providers (Tree);
 
-      for PAP of Projs.all loop
+--      if Command_Line.Verbose then
+--         for P2 of Projs.all loop
+--            for P of P2.Projects.all loop
+--               Put_Line (Project_Path (P));
+--            end loop;
+--         end loop;
+--      end if;
 
---         if Command_Line.Verbose then
---            Put_Line (PAP);
---         end if;
+      for PAP of Projs.all loop
 
          declare
             use Ada.Strings.Unbounded;
@@ -173,7 +177,13 @@ is
 --          Description  => "Ada pendant to `gettext`",
 --          Process_Unit => Process_Unit);
 
+   ------------------
+   -- Command_Line --
+   ------------------
+
    package body Command_Line is
+
+      Config : Command_Line_Configuration;
 
       -----------
       -- Parse --
@@ -181,9 +191,10 @@ is
 
       procedure Parse
       is
-         Config : Command_Line_Configuration;
       begin
-         Define_Switch (Config, Project'Access, "-P:", Help => "Project file");
+         Define_Switch (Config, Project'Access, "-P:",
+                        Help     => "Project file",
+                        Argument => "<PROJ>");
          Define_Switch (Config, Verbose'Access, "-v",  Help => "Verbose");
          Define_Switch (Config, Version'Access, "-V",
                         Long_Switch => "--version",
@@ -191,26 +202,47 @@ is
          Define_Switch (Config, Help'Access, "-h",
                         Long_Switch => "--help",
                         Help        => "Display help and exit");
+--         Set_Usage (Config, "AAA", "BBB", "CCC");
          Getopt (Config);
-
-         if Help then
-            Display_Help (Config);
-            raise Program_Termination;
-         elsif Version then
-            Put_Line (A18n_Config.Crate_Name &
-                      " version " & A18n_Config.Crate_Version);
-            raise Program_Termination;
-         end if;
       end Parse;
+
+      ------------------
+      -- Display_Help --
+      ------------------
+
+      procedure Display_Help is
+      begin
+         Display_Help (Config);
+      end Display_Help;
+
+      ----------
+      -- Free --
+      ----------
+
+      procedure Free is
+      begin
+         Free (Config);
+      end Free;
 
    end Command_Line;
 
 begin
    Command_Line.Parse;
+
+   if Command_Line.Help then
+      Command_Line.Display_Help;
+      return;
+
+   elsif Command_Line.Version then
+      Put_Line (A18n_Config.Crate_Name &
+                " version " & A18n_Config.Crate_Version);
+      return;
+   end if;
+   Command_Line.Free;
+
    Analyze_Project (Command_Line.Project.all);
 --   Application.Run;
 exception
-   when Program_Termination => null;
    when GNAT.Command_Line.Exit_From_Command_Line =>
       Put_Line ("EXCEPTION");
 end A18n_Main;
