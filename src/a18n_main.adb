@@ -6,6 +6,7 @@
 
 with Ada.Characters.Handling;
 with Ada.Directories;
+with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 
@@ -22,7 +23,6 @@ with Libadalang.Project_Provider;
 with A18n_Analysis;
 with A18n_Command_Line;
 with A18n_Config;
-with A18n_Intl;
 with A18n_POT;
 
 procedure A18n_Main
@@ -34,7 +34,8 @@ is
 
    Program_Termination : exception;
 
-   procedure Analyze_File      (Filename : String);
+   procedure Analyze_File      (Filename : String;
+                                Pyned    : String);
    procedure Analyze_Project   (Project_File : String);
    procedure Handle_Help_And_Version;
    procedure Check_Driver;
@@ -45,7 +46,8 @@ is
    -- Analyze_File --
    ------------------
 
-   procedure Analyze_File (Filename : String)
+   procedure Analyze_File (Filename : String;
+                           Pyned    : String)
    is
       use Libadalang.Analysis;
       use Libadalang.Common;
@@ -53,7 +55,6 @@ is
 
       Context : constant Analysis_Context := Create_Context;
       Unit    : constant Analysis_Unit    := Context.Get_From_File (Filename);
---      Predic  : constant Ada_Node_Predicate := Kind_Is (Ada_Subp_Kind_Function);
       Predic  : constant Ada_Node_Predicate
          := Kind_Is (Ada_Call_Expr)
          or Kind_Is (Ada_Un_Op)
@@ -63,19 +64,12 @@ is
    begin
       while Iter.Next (Node) loop
          case Node.Kind is
-         when Ada_Call_Expr => A18n_Analysis.Analyze_Call_Expr (Node, Filename);
-         when Ada_Un_Op     => A18n_Analysis.Analyze_Un_Op     (Node, Filename);
+         when Ada_Call_Expr => A18n_Analysis.Analyze_Call_Expr (Node, Pyned);
+         when Ada_Un_Op     => A18n_Analysis.Analyze_Un_Op     (Node, Pyned);
 --         when Ada_String_Literal => Analyze_Un_Op     (Node);
          when others        => null;
          end case;
       end loop;
---      Predic  : constant Ada_Node_Predicate := Kind_Is (Ada_Call_Expr);
---      Iter    : Traverse_Iterator'Class     := Find (Unit.Root, Predic);
---      Node    : Ada_Node;
---   begin
---      while Iter.Next (Node) loop
---         Analyze_Function (Node);
---      end loop;
    end Analyze_File;
 
    ---------------------
@@ -84,11 +78,13 @@ is
 
    procedure Analyze_Project (Project_File : String)
    is
+      use Ada.Directories;
       package VFS renames GNATCOLL.VFS;
 
       Tree  : GNATCOLL.Projects.Project_Tree_Access;
       Env   : GNATCOLL.Projects.Project_Environment_Access;
       Projs : Libadalang.Project_Provider.Provider_And_Projects_Array_Access;
+      CWD   : constant String := Current_Directory;
    begin
       Tree := new GNATCOLL.Projects.Project_Tree;
       GNATCOLL.Projects.Initialize (Env);
@@ -97,14 +93,6 @@ is
          Env               => Env);
 
       Projs := Libadalang.Project_Provider.Create_Project_Unit_Providers (Tree);
-
---      if Command_Line.Verbose then
---         for P2 of Projs.all loop
---            for P of P2.Projects.all loop
---               Put_Line (Project_Path (P));
---            end loop;
---         end loop;
---      end if;
 
       for PAP of Projs.all loop
 
@@ -116,13 +104,21 @@ is
                := Source_Files (Tree     => Tree.all,
                                 Mode     => Root_Project);
          begin
-            for Source of Sources loop
+            for Source_US of Sources loop
+               declare
+                  use Ada.Strings.Fixed;
 
-               if Command_Line.Verbose then
-                  Put_Line (To_String (Source));
-               end if;
+                  Source   : constant String := To_String (Source_US);
+                  Relative : constant String
+                     := Tail (Source, Source'Length - CWD'Length - 1);
+               begin
+                  if Command_Line.Verbose then
+                     Put_Line (Relative);
+                  end if;
 
-               Analyze_File (Filename => To_String (Source));
+                  Analyze_File (Filename => Source,
+                                Pyned    => Relative);
+               end;
             end loop;
          end;
       end loop;
