@@ -1,7 +1,7 @@
 name = "a18n"
 description = "Ada internationalization tool"
 long-description = '''
-Supposed to be an Ada pendant to `gettext`.
+This is an Ada pendant to `xgettext`.
 '''
 version = "0.1.0-dev"
 
@@ -10,9 +10,9 @@ maintainers = ["Jesper Quorning <jesper.quorning@gmail.com>"]
 maintainers-logins = ["jquorning"]
 licenses = "Apache-2.0"
 website = "https://github.com/jquorning/a18n"
-tags = ["i18n", "international", "gettext"]
+tags = ["i18n", "l10n", "nls", "gettext"]
 
-executables = ["a18n"]
+executables = ["agettext"]
 
 [[depends-on]]
 libadalang = "^25.0.0"

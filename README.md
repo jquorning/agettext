@@ -1,7 +1,8 @@
 # a18n
-Ada pendant to `gettext`
 
-## Installation
+Ada pendant to `xgettext`
+
+### Installation
 
 ```sh
 alr install a18n
@@ -10,5 +11,5 @@ alr install a18n
 ### Usage
 
 ```sh
-a18n -P <project.gpr>
+agettext -P <project.gpr>
 ```

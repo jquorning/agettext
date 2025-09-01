@@ -9,6 +9,8 @@ with A18n_Util;
 
 package body A18n_Analysis is
 
+   package A renames Libadalang.Analysis;
+
    use Ada.Text_IO;
 
    Verbose : constant Boolean := True;
@@ -19,11 +21,11 @@ package body A18n_Analysis is
 
    procedure Analyze_Call_Expr (Node : Libadalang.Analysis.Ada_Node'Class)
    is
-      package Lala renames Libadalang.Analysis;
       use Langkit_Support;
       use A18n_Util;
+      use type Libadalang.Common.Ada_Node_Kind_Type;
 
-      Expr : constant Lala.Call_Expr := Node.As_Call_Expr;
+      Expr : constant A.Call_Expr := Node.As_Call_Expr;
 --         := (case Node.Kind is
 --             when Libadalang.Common.Ada_Call_Expr =>
 --             when Libadalang.Common.Ada_Un_Op     => Node.As_Un_Op,
@@ -38,15 +40,16 @@ package body A18n_Analysis is
       New_Line;
 
       Put_Line ("  Kind: " & Node.Kind'Image);
-      Put_Line ("    P_Kind: " & Expr.P_Kind'Image);
+--      Put_Line ("    P_Kind: " & Expr.P_Kind'Image);
       Put_Line ("    E Kind: " & Expr.Kind'Image);
 
-      if Expr.P_Kind not in Libadalang.Common.Call then
+--      if Expr.P_Kind not in Libadalang.Common.Call then
+      if Expr.Kind /= Libadalang.Common.Ada_Call_Expr then
          return;
       end if;
 
       declare
-         Name : constant Lala.Name := Expr.As_Name;
+         Name : constant A.Name'Class := Expr.As_Name;
       begin
 --         Put_Line ("  Direct: " & Name.P_Is_Direct_Call'Image);
 --         Put_Line ("  Access: " & Name.P_Is_Access_Call'Image);
@@ -55,12 +58,32 @@ package body A18n_Analysis is
             return;
          end if;
 
-         Put_Line ("  Is_Dot: " & Name.P_Is_Dot_Call (False)'Image);
+         Put_Line ("  Is_Dot  : " & Name.P_Is_Dot_Call (False)'Image);
+         Put_Line ("  Defining: " & Name.P_Is_Defining'Image);
+         Put_Line ("  Direct  : " & Name.P_Is_Direct_Call'Image);
+         Put_Line ("  Call    : " & Name.P_Is_Call'Image);
+         Put_Line ("  Operator: " & Name.P_Is_Operator_Name'Image);
+
+         if Name.P_Is_Direct_Call then
+            --  Is a procedure
+            return;
+         end if;
+
+         if Name.P_Is_Operator_Name then
+            --  "-" () type of call
+            Put_Line ("    !! ""-"" () type of call");
+         else
+            --  Gettext () type of call
+            Put_Line ("    !! gettext () type of call");
+
+         if not Name.P_Is_Defining then
+            return;
+         end if;
 
          declare
-            Relat  : constant Lala.Name                     := Name.P_Relative_Name;
---          Spec   : constant Lala.Base_Formal_Param_Holder := Name.P_Called_Subp_Spec;
-            Params : constant Lala.Param_Actual_Array       := Name.P_Call_Params;
+            Relat  : constant A.Name                     := Name.P_Relative_Name;
+--          Spec   : constant A.Base_Formal_Param_Holder := Name.P_Called_Subp_Spec;
+            Params : constant A.Param_Actual_Array       := Name.P_Call_Params;
             Count  : Positive := 1;
          begin
             Put_Line (" Relat: " & Text.Image (Relat.Text));
@@ -68,16 +91,16 @@ package body A18n_Analysis is
 
             for Par of Params loop
                declare
-                  Defining   : constant Lala.Defining_Name'Class
-                     := Lala.Param (Par);
+                  Defining   : constant A.Defining_Name'Class
+                     := A.Param (Par);
                   Param_Name : constant String := Text.Image (Defining.F_Name.Text);
-                  Basic_Decl : constant Lala.Basic_Decl := Defining.P_Basic_Decl;
+--                  Basic_Decl : constant A.Basic_Decl := Defining.P_Basic_Decl;
 
 --                  Type_Name  : constant String
 --                     := Text.Image (Basic_Decl.P_Fully_Qualified_Name);
 
---                  Base_Type  : constant Lala.Base_Type_Decl
---                     := Lala.Base_Type_Decl (Basic_Decl); --  .As_Base_Type_Decl;
+--                  Base_Type  : constant A.Base_Type_Decl
+--                     := A.Base_Type_Decl (Basic_Decl); --  .As_Base_Type_Decl;
                begin
                   Put ("    " & Count'Image & "=> ");
                   Put (Param_Name);
@@ -87,6 +110,7 @@ package body A18n_Analysis is
                end;
             end loop;
          end;
+         end if;
       end;
    end Analyze_Call_Expr;
 
@@ -96,7 +120,6 @@ package body A18n_Analysis is
 
    procedure Analyze_Un_Op (Node : Libadalang.Analysis.Ada_Node'Class)
    is
-      package A renames Libadalang.Analysis;
       use Langkit_Support;
       use A18n_Util;
       use type A.Ada_Node;
@@ -107,7 +130,7 @@ package body A18n_Analysis is
       Next   : constant A.Ada_Node        := (if Next_2 = A.No_Ada_Node
                                               then A.No_Ada_Node
                                               else Next_2.Next_Sibling);
---      List  : constant Lala.Param_Spec_List := Node.As_Param_Spec_List;
+--      List  : constant A.Param_Spec_List := Node.As_Param_Spec_List;
    begin
       Put_Line ("Found: " & Node.Image);
 

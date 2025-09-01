@@ -4,14 +4,15 @@
 --    a18n proj.gpr
 --
 
+with Ada.Characters.Handling;
+with Ada.Directories;
 with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 
-with GNAT.Command_Line;
-with GNAT.Strings;
-
 with GNATCOLL.Projects;
 with GNATCOLL.VFS;
+
+with GNAT.Strings;
 
 with Libadalang.Analysis;
 with Libadalang.Common;
@@ -19,32 +20,26 @@ with Libadalang.Iterators;
 with Libadalang.Project_Provider;
 
 with A18n_Analysis;
+with A18n_Command_Line;
 with A18n_Config;
+with A18n_Intl;
+with A18n_POT;
 
 procedure A18n_Main
 is
+   package Command_Line renames A18n_Command_Line;
+   package POT          renames A18n_POT;
+
    use Ada.Text_IO;
+
+   Program_Termination : exception;
 
    procedure Analyze_File      (Filename : String);
    procedure Analyze_Project   (Project_File : String);
-
---   Output_File : constant String := "x.po";
---   Translator  : constant String := "intl";
-
-   package Command_Line
-   is
-      use GNAT.Command_Line;
-
-      Project   : aliased GNAT.Strings.String_Access := null;
-      Verbose   : aliased Boolean := False;
-      Help      : aliased Boolean := False;
-      Version   : aliased Boolean := False;
-
-      procedure Parse;
-      procedure Display_Help;
-      procedure Free;
-
-   end Command_Line;
+   procedure Handle_Help_And_Version;
+   procedure Check_Driver;
+   procedure Check_Project;
+   procedure Check_Output;
 
    ------------------
    -- Analyze_File --
@@ -177,72 +172,105 @@ is
 --          Description  => "Ada pendant to `gettext`",
 --          Process_Unit => Process_Unit);
 
+   -----------------------------
+   -- Handle_Help_And_Version --
+   -----------------------------
+
+   procedure Handle_Help_And_Version
+   is
+   begin
+      if Command_Line.Help then
+         Command_Line.Display_Help;
+         raise Program_Termination;
+
+      elsif Command_Line.Version then
+         Put_Line (A18n_Config.Crate_Name &
+                   " version " & A18n_Config.Crate_Version);
+         raise Program_Termination;
+      end if;
+   end Handle_Help_And_Version;
+
    ------------------
-   -- Command_Line --
+   -- Check_Driver --
    ------------------
 
-   package body Command_Line is
+   procedure Check_Driver
+   is
+      use GNAT.Strings;
 
-      Config : Command_Line_Configuration;
+      Driver_Intl : constant String := "intl";
 
-      -----------
-      -- Parse --
-      -----------
+      Driver : String_Access renames A18n_Command_Line.Driver;
+      Copy   : String_Access;
+   begin
+      if Driver = null then
+         Driver := new String'(Driver_Intl);
+      end if;
 
-      procedure Parse
-      is
-      begin
-         Define_Switch (Config, Project'Access, "-P:",
-                        Help     => "Project file",
-                        Argument => "<PROJ>");
-         Define_Switch (Config, Verbose'Access, "-v",  Help => "Verbose");
-         Define_Switch (Config, Version'Access, "-V",
-                        Long_Switch => "--version",
-                        Help        => "Display version and exit");
-         Define_Switch (Config, Help'Access, "-h",
-                        Long_Switch => "--help",
-                        Help        => "Display help and exit");
---         Set_Usage (Config, "AAA", "BBB", "CCC");
-         Getopt (Config);
-      end Parse;
+      Copy := Driver;
+      Driver := new String'(Ada.Characters.Handling.To_Lower (Driver.all));
+      Free (Copy);
 
-      ------------------
-      -- Display_Help --
-      ------------------
+      if Driver.all not in Driver_Intl then
+         Put_Line (Standard_Error,
+                   "Unknown i18n driver, '" & Driver.all & "'. Exiting");
+         raise Program_Termination;
+      end if;
+   end Check_Driver;
 
-      procedure Display_Help is
-      begin
-         Display_Help (Config);
-      end Display_Help;
+   -------------------
+   -- Check_Project --
+   -------------------
 
-      ----------
-      -- Free --
-      ----------
+   procedure Check_Project
+   is
+   begin
+      if Command_Line.Project.all in "" then
+         Put_Line (Standard_Error,
+                   "Unknown project, '" & Command_Line.Project.all & "'. Exiting");
+         raise Program_Termination;
+      end if;
+   end Check_Project;
 
-      procedure Free is
-      begin
-         Free (Config);
-      end Free;
+   ------------------
+   -- Check_Output --
+   ------------------
 
-   end Command_Line;
+   procedure Check_Output
+   is
+      use Ada.Directories;
+      use type GNAT.Strings.String_Access;
+   begin
+      if Command_Line.Output = null then
+         Command_Line.Output
+            := new String'(Base_Name (Command_Line.Project.all & ".pot"));
+      end if;
+
+      if Command_Line.Force then
+         POT.Open (Command_Line.Output.all);
+         return;
+      end if;
+
+      if Exists (Command_Line.Output.all) then
+         Put_Line (Standard_Error,
+                   "POT file exists. Exiting");
+         raise Program_Termination;
+      end if;
+
+      POT.Open (Command_Line.Output.all);
+   end Check_Output;
 
 begin
    Command_Line.Parse;
-
-   if Command_Line.Help then
-      Command_Line.Display_Help;
-      return;
-
-   elsif Command_Line.Version then
-      Put_Line (A18n_Config.Crate_Name &
-                " version " & A18n_Config.Crate_Version);
-      return;
-   end if;
-   Command_Line.Free;
+   Handle_Help_And_Version;
+   Check_Driver;
+   Check_Project;
+   Check_Output;
 
    Analyze_Project (Command_Line.Project.all);
+
+   Command_Line.Free;
 --   Application.Run;
 exception
-   when GNAT.Command_Line.Exit_From_Command_Line =>
-      Put_Line ("EXCEPTION");
+   when Program_Termination => null;
 end A18n_Main;

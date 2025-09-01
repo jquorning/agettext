@@ -9,7 +9,7 @@ project A18n is
    for Main use ("a18n_main.adb");
 
    package Builder is
-      for Executable ("a18n_main.adb") use "a18n";
+      for Executable ("a18n_main.adb") use "agettext";
    end Builder;
 
    package Compiler is
@@ -19,6 +19,7 @@ project A18n is
          A18n_Config.Ada_Compiler_Switches & (
             "-ffunction-sections",
             "-fdata-sections",
+            "-O1",
             "-gnatwa",
             "-gnatyyM90"
          );
