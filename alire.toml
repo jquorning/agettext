@@ -3,19 +3,16 @@ description = "Ada internationalization tool"
 long-description = '''
 Supposed to be an Ada pendant to `gettext`.
 '''
-version = "0.1.0"
+version = "0.1.0-dev"
 
 authors = ["Jesper Quorning"]
 maintainers = ["Jesper Quorning <jesper.quorning@gmail.com>"]
 maintainers-logins = ["jquorning"]
-licenses = "MIT OR Apache-2.0 WITH LLVM-exception"
-website = ""
+licenses = "Apache-2.0"
+website = "https://github.com/jquorning/a18n"
 tags = ["i18n", "international", "gettext"]
 
 executables = ["a18n"]
-
-#[test]
-#runner = "alire"
 
 [[depends-on]]
 libadalang = "^25.0.0"

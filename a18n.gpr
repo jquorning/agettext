@@ -13,8 +13,13 @@ project A18n is
    end Builder;
 
    package Compiler is
+      for Local_Configuration_Pragmas use "src/a18n.adc";
+
       for Default_Switches ("Ada") use
          A18n_Config.Ada_Compiler_Switches & (
+            "-ffunction-sections",
+            "-fdata-sections",
+            "-gnatwa",
             "-gnatyyM90"
          );
    end Compiler;
@@ -23,8 +28,13 @@ project A18n is
       for Switches ("Ada") use ("-Es"); --  Symbolic traceback
    end Binder;
 
---   package Install is
---      for Artifacts (".") use ("share");
---   end Install;
+   package Linker is
+      for Switches ("Ada") use (
+         "-Wl,--gc-sections");
+   end Linker;
+
+   package Install is
+      for Artifacts (".") use ("share");
+   end Install;
 
 end A18n;

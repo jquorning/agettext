@@ -4,69 +4,47 @@
 --    a18n proj.gpr
 --
 
-with Ada.Command_Line;
 with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 
+with GNAT.Command_Line;
+with GNAT.Strings;
+
 with GNATCOLL.Projects;
 with GNATCOLL.VFS;
-
-with Langkit_Support.Slocs;
-with Langkit_Support.Text;
 
 with Libadalang.Analysis;
 with Libadalang.Common;
 with Libadalang.Iterators;
 with Libadalang.Project_Provider;
 
+with A18n_Analysis;
+with A18n_Config;
+
 procedure A18n_Main
 is
    use Ada.Text_IO;
 
-   procedure Analyze_Function (Node : Libadalang.Analysis.Ada_Node'Class);
-   procedure Analyze_File (Filename : String);
-   procedure Analyze_Project (Project_File : String);
+   Program_Termination : exception;
+
+   procedure Analyze_File      (Filename : String);
+   procedure Analyze_Project   (Project_File : String);
 
 --   Output_File : constant String := "x.po";
 --   Translator  : constant String := "intl";
 
-   ----------------------
-   -- Analyze_Function --
-   ----------------------
-
-   procedure Analyze_Function (Node : Libadalang.Analysis.Ada_Node'Class)
+   package Command_Line
    is
---      use Libadalang.Common;
---      use Langkit_Support.Slocs;
---      use Langkit_Support.Text;
-      use Langkit_Support;
-   begin
-      Put_Line ("Found: " & Node.Image);
-      Put_Line (" Line: " &
-                Slocs.Line_Number'Image (Node.Sloc_Range.Start_Line)          &
-                ":"   & Slocs.Column_Number'Image (Node.Sloc_Range.Start_Column) &
-                ".."  & Slocs.Column_Number'Image (Node.Sloc_Range.End_Column)   &
-                ": " & Text.Image (Node.Text));
-      Put_Line (" Kind: " & Node.Kind'Image);
---      Put_Line ("  P_Kind: " & Node.As_Call_Expr.P_Kind'Image);
---      Put_Line ("  Token: " & Libadalang.Common.Is_Token_Node (Node.Kind)'Image);
---      Put_Line ("  List : " & Libadalang.Common.Is_List_Node  (Node.Kind)'Image);
---      Put_Line ("  Error: " & Libadalang.Common.Is_Token_Node (Node.Kind)'Image);
+      use GNAT.Command_Line;
 
---      Put_Line (" Subp: " & Node.As_Subp_Kind);
+      Project   : aliased GNAT.Strings.String_Access := null;
+      Verbose   : aliased Boolean := False;
+      Help      : aliased Boolean := False;
+      Version   : aliased Boolean := False;
 
---      Put_Line (" Is_Call: " & Node.P_Is_Call'Image);
---      Put_Line (" Name: " & Node.P_Defining_Name'Image);
---      Put_Line (" Resolv: " & Node.P_Resolve_Names'Image);
---      Put_Line (" Name: " & Text.Image (Node.F_Name));
---      Put_Line (" Xref: " & Node.P_Xref_Entry_Point'Image);
---      Put_Line (" GNAT: " & Node.P_Gnat_Xref (False)'Image);
+      procedure Parse;
 
---      Put_Line ("  Fully: " & Text.Image (Node.P_Gnat_Xref (False).P_Fully_Qualified_Name));
---      Put_Line ("  Uniqu: " & Text.Image (Node.P_Gnat_Xref (False).P_Unique_Identifying_Name));
---      Put_Line (" Is_Call: " & Node.P_Is_Call'Image);
---      Put_Line ("Identifier: " & Node.F_Ids.Image);
-   end Analyze_Function;
+   end Command_Line;
 
    ------------------
    -- Analyze_File --
@@ -81,13 +59,28 @@ is
       Context : constant Analysis_Context := Create_Context;
       Unit    : constant Analysis_Unit    := Context.Get_From_File (Filename);
 --      Predic  : constant Ada_Node_Predicate := Kind_Is (Ada_Subp_Kind_Function);
-      Predic  : constant Ada_Node_Predicate := Kind_Is (Ada_Call_Expr);
+      Predic  : constant Ada_Node_Predicate
+         := Kind_Is (Ada_Call_Expr)
+         or Kind_Is (Ada_Un_Op)
+         or Kind_Is (Ada_String_Literal);
       Iter    : Traverse_Iterator'Class     := Find (Unit.Root, Predic);
       Node    : Ada_Node;
    begin
       while Iter.Next (Node) loop
-         Analyze_Function (Node);
+         case Node.Kind is
+         when Ada_Call_Expr      => A18n_Analysis.Analyze_Call_Expr (Node);
+         when Ada_Un_Op          => A18n_Analysis.Analyze_Un_Op     (Node);
+--         when Ada_String_Literal => Analyze_Un_Op     (Node);
+         when others             => null;
+         end case;
       end loop;
+--      Predic  : constant Ada_Node_Predicate := Kind_Is (Ada_Call_Expr);
+--      Iter    : Traverse_Iterator'Class     := Find (Unit.Root, Predic);
+--      Node    : Ada_Node;
+--   begin
+--      while Iter.Next (Node) loop
+--         Analyze_Function (Node);
+--      end loop;
    end Analyze_File;
 
    ---------------------
@@ -111,19 +104,25 @@ is
       Projs := Libadalang.Project_Provider.Create_Project_Unit_Providers (Tree);
 
       for PAP of Projs.all loop
+
+--         if Command_Line.Verbose then
+--            Put_Line (PAP);
+--         end if;
+
          declare
             use Ada.Strings.Unbounded;
             use Libadalang.Project_Provider;
-
---   Context : constant Libadalang.Analysis.Analysis_Context
---     := Libadalang.Analysis.Create_Context (Unit_Provider => PAP.Provider);
 
             Sources : constant Filename_Vectors.Vector
                := Source_Files (Tree     => Tree.all,
                                 Mode     => Root_Project);
          begin
             for Source of Sources loop
-               Put_Line (To_String (Source));
+
+               if Command_Line.Verbose then
+                  Put_Line (To_String (Source));
+               end if;
+
                Analyze_File (Filename => To_String (Source));
             end loop;
          end;
@@ -134,6 +133,84 @@ is
       GNATCOLL.Projects.Free (Env);
    end Analyze_Project;
 
+--    ------------------
+--    -- Process_Unit --
+--    ------------------
+
+--    procedure Process_Unit (Context : Libadalang.Helpers.App_Job_Context;
+--                            Unit    : Libadalang.Analysis.Analysis_Unit)
+--    is
+--       pragma Unreferenced (Context);
+
+--       use Libadalang.Analysis;
+--       use Libadalang.Common;
+--       use Libadalang.Iterators;
+
+--       Predic  : constant Ada_Node_Predicate
+--          := Kind_Is (Ada_Call_Expr)
+--          or Kind_Is (Ada_Un_Op)
+--          or Kind_Is (Ada_String_Literal);
+--       Iter    : Traverse_Iterator'Class     := Find (Unit.Root, Predic);
+--       Node    : Ada_Node;
+--    begin
+--       while Iter.Next (Node) loop
+--          case Node.Kind is
+--          when Ada_Call_Expr      => Analyze_Call_Expr (Node);
+--          when Ada_Un_Op          => Analyze_Un_Op     (Node);
+--  --         when Ada_String_Literal => Analyze_Un_Op     (Node);
+--          when others             => null;
+--          end case;
+--       end loop;
+--    end Process_Unit;
+
+--    -----------------
+--    -- Application --
+--    -----------------
+
+--    package Application is new
+--       Libadalang.Helpers.App
+--         (Name         => A18n_Config.Crate_Name,
+--          Description  => "Ada pendant to `gettext`",
+--          Process_Unit => Process_Unit);
+
+   package body Command_Line is
+
+      -----------
+      -- Parse --
+      -----------
+
+      procedure Parse
+      is
+         Config : Command_Line_Configuration;
+      begin
+         Define_Switch (Config, Project'Access, "-P:", Help => "Project file");
+         Define_Switch (Config, Verbose'Access, "-v",  Help => "Verbose");
+         Define_Switch (Config, Version'Access, "-V",
+                        Long_Switch => "--version",
+                        Help        => "Display version and exit");
+         Define_Switch (Config, Help'Access, "-h",
+                        Long_Switch => "--help",
+                        Help        => "Display help and exit");
+         Getopt (Config);
+
+         if Help then
+            Display_Help (Config);
+            raise Program_Termination;
+         elsif Version then
+            Put_Line (A18n_Config.Crate_Name &
+                      " version " & A18n_Config.Crate_Version);
+            raise Program_Termination;
+         end if;
+      end Parse;
+
+   end Command_Line;
+
 begin
-   Analyze_Project (Ada.Command_Line.Argument (1));
+   Command_Line.Parse;
+   Analyze_Project (Command_Line.Project.all);
+--   Application.Run;
+exception
+   when Program_Termination => null;
+   when GNAT.Command_Line.Exit_From_Command_Line =>
+      Put_Line ("EXCEPTION");
 end A18n_Main;
