@@ -203,7 +203,7 @@ is
       Driver : String_Access renames A18n_Command_Line.Driver;
       Copy   : String_Access;
    begin
-      if Driver = null then
+      if Driver.all in "" then
          Driver := new String'(Driver_Intl);
       end if;
 
@@ -241,9 +241,9 @@ is
       use Ada.Directories;
       use type GNAT.Strings.String_Access;
    begin
-      if Command_Line.Output = null then
+      if Command_Line.Output.all = "" then
          Command_Line.Output
-            := new String'(Base_Name (Command_Line.Project.all & ".pot"));
+            := new String'(Base_Name (Command_Line.Project.all) & ".pot");
       end if;
 
       if Command_Line.Force then
@@ -272,5 +272,12 @@ begin
    Command_Line.Free;
 --   Application.Run;
 exception
-   when Program_Termination => null;
+   when Program_Termination =>
+      null;
+
+   when GNATCOLL.Projects.Invalid_Project =>
+      Put_Line (Standard_Error, "Invalid project. Exiting");
+
+   when Command_Line.Invalid_Parameter =>
+      Put_Line (Standard_Error, "Invalid parameter. Exiting");
 end A18n_Main;

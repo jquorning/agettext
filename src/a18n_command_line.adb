@@ -1,6 +1,4 @@
 
-with GNAT.Command_Line;
-
 package body A18n_Command_Line
 is
    use GNAT.Command_Line;
@@ -26,12 +24,12 @@ is
       Define_Switch (Config, Help'Access, "-h",
                      Long_Switch => "--help",
                      Help        => "Display help and exit");
-      Define_Switch (Config, Output'Access,
+      Define_Switch (Config, Output'Access, "-o:",
                      Long_Switch => "--output=",
                      Argument    => "POT",
                      Help        => "Output POT file");
       Define_Switch (Config, Project'Access, "-P:",
-                     Help     => "Project file",
+                     Help     => "GNAT Project file (.gpr)",
                      Argument => "<PROJECT>");
       Define_Switch (Config, Verbose'Access, "-v",  Help => "Verbose");
       Define_Switch (Config, Version'Access, "-V",
@@ -40,7 +38,11 @@ is
 --         Set_Usage (Config, "AAA", "BBB", "CCC");
       Getopt (Config);
    exception
-      when Exit_From_Command_Line => null;  --  Help does this!
+      when Exit_From_Command_Line =>
+         null;  --  Help does this!
+
+      when GNAT.Command_Line.Invalid_Parameter =>
+         raise Invalid_Parameter;
 --      when Invalid_Switch =>
 --         Put_Line (Standard_Error, "Invalid switch");
    end Parse;
