@@ -39,6 +39,4 @@ package A18n_Options is
 
    Used_Driver : Driver_Kind := Driver_Kind'First;
 
-   Driver : Driv.Driver_Type'Class renames Drivers (Used_Driver).all;
-
 end A18n_Options;

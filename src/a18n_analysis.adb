@@ -5,6 +5,7 @@ with Langkit_Support.Text;
 
 with Libadalang.Common;
 
+with A18n_Driver;
 with A18n_Options;
 with A18n_POT;
 with A18n_Util;
@@ -13,6 +14,7 @@ package body A18n_Analysis is
 
    package A      renames Libadalang.Analysis;
    package C      renames Libadalang.Common;
+   package Driv   renames A18n_Driver;
    package Option renames A18n_Options;
    package POT    renames A18n_POT;
 
@@ -183,6 +185,9 @@ package body A18n_Analysis is
       use type A.Ada_Node;
       use type C.Ada_Node_Kind_Type;
 
+      Driver : Driv.Driver_Type'Class
+         renames Option.Drivers (Option.Used_Driver).all;
+
       First  : constant A.Ada_Node := Node.First_Child;
       Last   : constant A.Ada_Node := Node.Last_Child;
       Quoted : constant String     := Text.Image (Last.Text);
@@ -205,7 +210,7 @@ package body A18n_Analysis is
 
       if
         Last.Kind = C.Ada_String_Literal and then
-        Operator_In (First, Option.Driver.Unary_Operator)
+        Operator_In (First, Driver.Unary_Operator)
       then
          POT.Put_Entry
            (Source_Name   => Filename,
