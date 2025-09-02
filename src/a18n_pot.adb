@@ -3,11 +3,11 @@ with Ada.Directories;
 with Ada.Strings.Fixed;
 with Ada.Text_IO;
 
-with A18n_Command_Line;
+with A18n_Options;
 
 package body A18n_POT
 is
-   package Command_Line renames A18n_Command_Line;
+   package Option renames A18n_Options;
 
    use Ada.Text_IO;
 
@@ -53,7 +53,7 @@ is
 
       Put (File, "#: " & Source_Name &
                  ":" & Fixed.Trim (Line_Number'Image, Left));
-      if Command_Line.Columns then
+      if Option.Columns then
          Put (File, ":" & Fixed.Trim (Column_Number'Image, Left));
       end if;
       New_Line (File);

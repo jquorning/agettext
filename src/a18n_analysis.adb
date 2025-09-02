@@ -5,7 +5,6 @@ with Langkit_Support.Text;
 
 with Libadalang.Common;
 
-with A18n_Command_Line;
 with A18n_Options;
 with A18n_POT;
 with A18n_Util;
@@ -20,7 +19,7 @@ package body A18n_Analysis is
    function Operator_In (Node : A.Ada_Node;
                          Func : String) return Boolean;
 
-   Debug : Boolean renames A18n_Command_Line.Debug;
+   Debug : Boolean renames Option.Debug;
 
    --  Current driver
 

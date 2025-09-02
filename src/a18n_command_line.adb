@@ -1,6 +1,10 @@
 
+with A18n_Options;
+
 package body A18n_Command_Line
 is
+   package Option renames A18n_Options;
+
    use GNAT.Command_Line;
 
    Config : Command_Line_Configuration;
@@ -12,29 +16,30 @@ is
    procedure Parse
    is
    begin
-      Define_Switch (Config, Columns'Access, "-c",
+      Define_Switch (Config, Option.Columns'Access, "-c",
                      Help        => "Add columns to POT file");
-      Define_Switch (Config, Debug'Access, "-d",
+      Define_Switch (Config, Option.Debug'Access, "-d",
                      Help        => "Display debug texts");
-      Define_Switch (Config, Driver'Access,
+      Define_Switch (Config, Option.Driver_Str'Access,
                      Long_Switch => "--driver=",
                      Argument    => "DRIVER",
                      Help        => "Driver package for i18n. Default is 'Intl'");
-      Define_Switch (Config, Force'Access, "-f",
+      Define_Switch (Config, Option.Force'Access, "-f",
                      Long_Switch => "--force",
                      Help        => "Force. (Overwrite output POT)");
-      Define_Switch (Config, Help'Access, "-h",
+      Define_Switch (Config, Option.Help'Access, "-h",
                      Long_Switch => "--help",
                      Help        => "Display help and exit");
-      Define_Switch (Config, Output'Access, "-o:",
+      Define_Switch (Config, Option.Output'Access, "-o:",
                      Long_Switch => "--output=",
                      Argument    => "POT",
                      Help        => "Output POT file");
-      Define_Switch (Config, Project'Access, "-P:",
-                     Help     => "GNAT Project file (.gpr)",
-                     Argument => "<PROJECT>");
-      Define_Switch (Config, Verbose'Access, "-v",  Help => "Verbose");
-      Define_Switch (Config, Version'Access, "-V",
+      Define_Switch (Config, Option.Project'Access, "-P:",
+                     Help        => "GNAT Project file (.gpr)",
+                     Argument    => "<PROJECT>");
+      Define_Switch (Config, Option.Verbose'Access, "-v",
+                     Help        => "Verbose");
+      Define_Switch (Config, Option.Version'Access, "-V",
                      Long_Switch => "--version",
                      Help        => "Display version and exit");
 --         Set_Usage (Config, "AAA", "BBB", "CCC");

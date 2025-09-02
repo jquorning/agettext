@@ -114,7 +114,7 @@ is
                   Relative : constant String
                      := Tail (Source, Source'Length - CWD'Length - 1);
                begin
-                  if Command_Line.Verbose then
+                  if Option.Verbose then
                      Put_Line (Relative);
                   end if;
 
@@ -177,11 +177,11 @@ is
    procedure Handle_Help_And_Version
    is
    begin
-      if Command_Line.Help then
+      if Option.Help then
          Command_Line.Display_Help;
          raise Program_Termination;
 
-      elsif Command_Line.Version then
+      elsif Option.Version then
          Put_Line (A18n_Config.Crate_Name &
                    " version " & A18n_Config.Crate_Version);
          raise Program_Termination;
@@ -198,7 +198,7 @@ is
 
       Driver_Intl : constant String := "intl";
 
-      Driver : String_Access renames A18n_Command_Line.Driver;
+      Driver : String_Access renames Option.Driver_Str;
       Copy   : String_Access;
    begin
       if Driver.all in "" then
@@ -228,9 +228,9 @@ is
    procedure Check_Project
    is
    begin
-      if Command_Line.Project.all in "" then
+      if Option.Project.all in "" then
          Put_Line (Standard_Error,
-                   "Unknown project, '" & Command_Line.Project.all & "'. Exiting");
+                   "Unknown project, '" & Option.Project.all & "'. Exiting");
          raise Program_Termination;
       end if;
    end Check_Project;
@@ -244,23 +244,23 @@ is
       use Ada.Directories;
       use type GNAT.Strings.String_Access;
    begin
-      if Command_Line.Output.all = "" then
-         Command_Line.Output
-            := new String'(Base_Name (Command_Line.Project.all) & ".pot");
+      if Option.Output.all = "" then
+         Option.Output
+            := new String'(Base_Name (Option.Project.all) & ".pot");
       end if;
 
-      if Command_Line.Force then
-         POT.Open (Command_Line.Output.all);
+      if Option.Force then
+         POT.Open (Option.Output.all);
          return;
       end if;
 
-      if Exists (Command_Line.Output.all) then
+      if Exists (Option.Output.all) then
          Put_Line (Standard_Error,
                    "POT file exists. Exiting");
          raise Program_Termination;
       end if;
 
-      POT.Open (Command_Line.Output.all);
+      POT.Open (Option.Output.all);
    end Check_Output;
 
 begin
@@ -272,7 +272,7 @@ begin
 
 --   POT.Put_Entry ("a18n_main.adb", 117, "Hello, World!", "Test");
 
-   Analyze_Project (Command_Line.Project.all);
+   Analyze_Project (Option.Project.all);
 
    Command_Line.Free;
 --   Application.Run;
