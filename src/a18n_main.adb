@@ -23,11 +23,13 @@ with Libadalang.Project_Provider;
 with A18n_Analysis;
 with A18n_Command_Line;
 with A18n_Config;
+with A18n_Options;
 with A18n_POT;
 
 procedure A18n_Main
 is
    package Command_Line renames A18n_Command_Line;
+   package Option       renames A18n_Options;
    package POT          renames A18n_POT;
 
    use Ada.Text_IO;
@@ -207,11 +209,16 @@ is
       Driver := new String'(Ada.Characters.Handling.To_Lower (Driver.all));
       Free (Copy);
 
-      if Driver.all not in Driver_Intl then
-         Put_Line (Standard_Error,
-                   "Unknown i18n driver, '" & Driver.all & "'. Exiting");
-         raise Program_Termination;
-      end if;
+      for A in Option.Drivers'Range loop
+         if Driver.all = Option.Drivers (A).Driver_Name then
+            Option.Used_Driver := A;
+            return;
+         end if;
+      end loop;
+
+      Put_Line (Standard_Error,
+              "Unknown i18n driver, '" & Driver.all & "'. Exiting");
+      raise Program_Termination;
    end Check_Driver;
 
    -------------------

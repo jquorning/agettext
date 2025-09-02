@@ -19,6 +19,7 @@ project A18n is
          A18n_Config.Ada_Compiler_Switches & (
             "-ffunction-sections",
             "-fdata-sections",
+            "-g",
             "-O1",
             "-gnatwa",
             "-gnatyyM90"

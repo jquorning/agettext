@@ -6,20 +6,24 @@ with Langkit_Support.Text;
 with Libadalang.Common;
 
 with A18n_Command_Line;
-with A18n_Intl;
+with A18n_Options;
 with A18n_POT;
 with A18n_Util;
 
 package body A18n_Analysis is
 
-   package A   renames Libadalang.Analysis;
-   package C   renames Libadalang.Common;
-   package POT renames A18n_POT;
+   package A      renames Libadalang.Analysis;
+   package C      renames Libadalang.Common;
+   package Option renames A18n_Options;
+   package POT    renames A18n_POT;
 
    function Operator_In (Node : A.Ada_Node;
                          Func : String) return Boolean;
 
    Debug : Boolean renames A18n_Command_Line.Debug;
+
+   --  Current driver
+
 
    -----------------------
    -- Analyze_Call_Expr --
@@ -202,7 +206,7 @@ package body A18n_Analysis is
 
       if
         Last.Kind = C.Ada_String_Literal and then
-        Operator_In (First, A18n_Intl.Unary_Operator)
+        Operator_In (First, Option.Driver.Unary_Operator)
       then
          POT.Put_Entry
            (Source_Name   => Filename,
