@@ -16,18 +16,18 @@ package body A18n_Intl is
    -- Regular_Functions --
    -----------------------
 
-   function Regular_Functions return GNAT.Strings.String_List is
+   function Regular_Function return String is
    begin
-      return (1 => new String'("gettext"));
-   end Regular_Functions;
+      return "gettext";
+   end Regular_Function;
 
    ---------------------
    -- Unary_Operators --
    ---------------------
 
-   function Unary_Operators return GNAT.Strings.String_List is
+   function Unary_Operator return String is
    begin
-      return (1 => new String'("-"));
-   end Unary_Operators;
+      return "-";
+   end Unary_Operator;
 
 end A18n_Intl;

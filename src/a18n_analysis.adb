@@ -1,8 +1,6 @@
 
 with Ada.Text_IO;
 
-with GNAT.Strings;
-
 with Langkit_Support.Text;
 
 with Libadalang.Common;
@@ -15,12 +13,11 @@ with A18n_Util;
 package body A18n_Analysis is
 
    package A   renames Libadalang.Analysis;
+   package C   renames Libadalang.Common;
    package POT renames A18n_POT;
 
-   use Ada.Text_IO;
-
    function Operator_In (Node : A.Ada_Node;
-                         List : GNAT.Strings.String_List) return Boolean;
+                         Func : String) return Boolean;
 
    Debug : Boolean renames A18n_Command_Line.Debug;
 
@@ -33,16 +30,20 @@ package body A18n_Analysis is
    is
       pragma Unreferenced (Filename);
 
+      use Ada.Text_IO;
       use Langkit_Support;
       use A18n_Util;
-      use type Libadalang.Common.Ada_Node_Kind_Type;
+      use type C.Ada_Node_Kind_Type;
 
-      Expr : constant A.Call_Expr := Node.As_Call_Expr;
---         := (case Node.Kind is
---             when Libadalang.Common.Ada_Call_Expr =>
---             when Libadalang.Common.Ada_Un_Op     => Node.As_Un_Op,
---             when others                          => raise Program_Error);
+      Expr   : constant A.Call_Expr  := Node.As_Call_Expr;
+      Parent : constant A.Ada_Node   := Node.Parent;
+--      Semant : constant A.Ada_Node   := Node.P_Semantic_Parent;
+--      Basic  : constant A.Basic_Decl := Node.P_Parent_Basic_Decl;
    begin
+      if Parent.Kind in C.Ada_Call_Stmt then
+         return;
+      end if;
+
       Put_Line ("Found: " & Node.Image);
 
       Put      ("  Line: " & Text.Image (Node.Text));
@@ -52,11 +53,13 @@ package body A18n_Analysis is
       New_Line;
 
       Put_Line ("  Kind: " & Node.Kind'Image);
---      Put_Line ("    P_Kind: " & Expr.P_Kind'Image);
       Put_Line ("    E Kind: " & Expr.Kind'Image);
+      Put_Line ("  Parent:  " & Parent.Kind'Image);
 
---      if Expr.P_Kind not in Libadalang.Common.Call then
-      if Expr.Kind /= Libadalang.Common.Ada_Call_Expr then
+--      Put_Line ("  Basic:  " & Basic.Kind'Image);
+--      Put_Line ("  Semant: " & Semant.Kind'Image);
+
+      if Expr.Kind /= C.Ada_Call_Expr then
          return;
       end if;
 
@@ -171,10 +174,11 @@ package body A18n_Analysis is
    procedure Analyze_Un_Op (Node     : A.Ada_Node'Class;
                             Filename : String)
    is
+      use Ada.Text_IO;
       use Langkit_Support;
       use A18n_Util;
       use type A.Ada_Node;
-      use type Libadalang.Common.Ada_Node_Kind_Type;
+      use type C.Ada_Node_Kind_Type;
 
       First  : constant A.Ada_Node := Node.First_Child;
       Last   : constant A.Ada_Node := Node.Last_Child;
@@ -197,14 +201,15 @@ package body A18n_Analysis is
       end if;
 
       if
-        Last.Kind = Libadalang.Common.Ada_String_Literal and then
-        Operator_In (First, A18n_Intl.Unary_Operators)
+        Last.Kind = C.Ada_String_Literal and then
+        Operator_In (First, A18n_Intl.Unary_Operator)
       then
          POT.Put_Entry
-           (Source_Name => Filename,
-            Line_Number => Natural (Node.Sloc_Range.Start_Line),
-            Text        => Un_Quote (Quoted),
-            Comment     => "");
+           (Source_Name   => Filename,
+            Line_Number   => Node.Sloc_Range.Start_Line,
+            Column_Number => Node.Sloc_Range.Start_Column,
+            Text          => Un_Quote (Quoted),
+            Comment       => "");
       end if;
 
    end Analyze_Un_Op;
@@ -214,7 +219,7 @@ package body A18n_Analysis is
    -----------------
 
    function Operator_In (Node : A.Ada_Node;
-                         List : GNAT.Strings.String_List) return Boolean
+                         Func : String) return Boolean
    is
       use Libadalang.Common;
 
@@ -224,16 +229,12 @@ package body A18n_Analysis is
       function In_List (Kind : Ada_Node_Kind_Type;
                         Op   : String) return Boolean
       is
-         use type GNAT.Strings.String_Access;
       begin
          if Node.Kind /= Kind then
             return False;
          end if;
 
-         for E of List loop
-            return E.all = Op;
-         end loop;
-         return False;
+         return Op = Func;
       end In_List;
 
    begin

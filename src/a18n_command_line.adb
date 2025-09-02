@@ -12,8 +12,10 @@ is
    procedure Parse
    is
    begin
+      Define_Switch (Config, Columns'Access, "-c",
+                     Help        => "Add columns to POT file");
       Define_Switch (Config, Debug'Access, "-d",
-                     Help => "Display debug texts");
+                     Help        => "Display debug texts");
       Define_Switch (Config, Driver'Access,
                      Long_Switch => "--driver=",
                      Argument    => "DRIVER",

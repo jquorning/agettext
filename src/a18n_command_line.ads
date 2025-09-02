@@ -8,6 +8,7 @@ is
 
    Invalid_Parameter : exception renames GNAT.Command_Line.Invalid_Parameter;
 
+   Columns   : aliased Boolean       := False;
    Debug     : aliased Boolean       := False;
    Driver    : aliased String_Access := null;
    Force     : aliased Boolean       := False;

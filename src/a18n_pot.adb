@@ -3,8 +3,12 @@ with Ada.Directories;
 with Ada.Strings.Fixed;
 with Ada.Text_IO;
 
+with A18n_Command_Line;
+
 package body A18n_POT
 is
+   package Command_Line renames A18n_Command_Line;
+
    use Ada.Text_IO;
 
    File : File_Type;
@@ -37,16 +41,23 @@ is
    -- Put_Entry --
    ---------------
 
-   procedure Put_Entry (Source_Name : String;
-                        Line_Number : Natural;
-                        Text        : String;
-                        Comment     : String := "")
+   procedure Put_Entry (Source_Name   : String;
+                        Line_Number   : A18n_POT.Line_Number;
+                        Column_Number : A18n_POT.Column_Number;
+                        Text          : String;
+                        Comment       : String := "")
    is
       use Ada.Strings;
    begin
       Put_Line (File, "");
-      Put_Line (File, "#: " & Source_Name &
-                      ":" & Fixed.Trim (Line_Number'Image, Left));
+
+      Put (File, "#: " & Source_Name &
+                 ":" & Fixed.Trim (Line_Number'Image, Left));
+      if Command_Line.Columns then
+         Put (File, ":" & Fixed.Trim (Column_Number'Image, Left));
+      end if;
+      New_Line (File);
+
       if Comment /= "" then
          Put_Line (File, "#  " & Comment);
       end if;

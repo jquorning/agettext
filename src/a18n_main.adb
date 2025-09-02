@@ -34,8 +34,8 @@ is
 
    Program_Termination : exception;
 
-   procedure Analyze_File      (Filename : String;
-                                Pyned    : String);
+   procedure Analyze_File      (Filename   : String;
+                                Short_Name : String);
    procedure Analyze_Project   (Project_File : String);
    procedure Handle_Help_And_Version;
    procedure Check_Driver;
@@ -46,8 +46,8 @@ is
    -- Analyze_File --
    ------------------
 
-   procedure Analyze_File (Filename : String;
-                           Pyned    : String)
+   procedure Analyze_File (Filename   : String;
+                           Short_Name : String)
    is
       use Libadalang.Analysis;
       use Libadalang.Common;
@@ -57,15 +57,15 @@ is
       Unit    : constant Analysis_Unit    := Context.Get_From_File (Filename);
       Predic  : constant Ada_Node_Predicate
          := Kind_Is (Ada_Call_Expr)
-         or Kind_Is (Ada_Un_Op)
-         or Kind_Is (Ada_String_Literal);
+         or Kind_Is (Ada_Un_Op);
+--         or Kind_Is (Ada_String_Literal);
       Iter    : Traverse_Iterator'Class     := Find (Unit.Root, Predic);
       Node    : Ada_Node;
    begin
       while Iter.Next (Node) loop
          case Node.Kind is
-         when Ada_Call_Expr => A18n_Analysis.Analyze_Call_Expr (Node, Pyned);
-         when Ada_Un_Op     => A18n_Analysis.Analyze_Un_Op     (Node, Pyned);
+         when Ada_Call_Expr => A18n_Analysis.Analyze_Call_Expr (Node, Short_Name);
+         when Ada_Un_Op     => A18n_Analysis.Analyze_Un_Op     (Node, Short_Name);
 --         when Ada_String_Literal => Analyze_Un_Op     (Node);
          when others        => null;
          end case;
@@ -116,8 +116,8 @@ is
                      Put_Line (Relative);
                   end if;
 
-                  Analyze_File (Filename => Source,
-                                Pyned    => Relative);
+                  Analyze_File (Filename   => Source,
+                                Short_Name => Relative);
                end;
             end loop;
          end;
