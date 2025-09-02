@@ -21,6 +21,8 @@ project A18n is
             "-fdata-sections",
             "-g",
             "-O1",
+            "-gnata",
+            "-gnatf",
             "-gnatwa",
             "-gnatyyM90"
          );

@@ -50,6 +50,10 @@ is
                              Filename   : String;
                              Subprogram : String)
                              return A.Defining_Name'Class;
+   function Project_Units (Context : in out A.Analysis_Context'Class;
+                           Tree    : GP.Project_Tree_Access;
+                           Projs   : PP.Provider_And_Projects_Array_Access)
+                           return A.Analysis_Unit_Array;
    procedure Handle_Help_And_Version;
    procedure Check_Driver;
    procedure Check_Project;
@@ -119,6 +123,52 @@ is
       raise Missing_Driver_Specification;
    end Find_Driver_Package;
 
+   -------------------
+   -- Project_Units --
+   -------------------
+
+   function Project_Units (Context : in out A.Analysis_Context'Class;
+                           Tree    : GP.Project_Tree_Access;
+                           Projs   : PP.Provider_And_Projects_Array_Access)
+                           return A.Analysis_Unit_Array
+   is
+      use Ada.Strings.Unbounded;
+
+      Count : Natural := 0;
+   begin
+      for PAP of Projs.all loop
+         declare
+            Sources : constant PP.Filename_Vectors.Vector
+               := PP.Source_Files (Tree     => Tree.all,
+                                   Mode     => PP.Default);
+         begin
+            Count := Count + Natural (PP.Filename_Vectors.Length (Sources));
+         end;
+      end loop;
+
+      declare
+         Units : A.Analysis_Unit_Array (1 .. Count);
+         Pos_U : Natural := 0;
+      begin
+         for PAP of Projs.all loop
+            declare
+               Sources : constant PP.Filename_Vectors.Vector
+                  := PP.Source_Files (Tree     => Tree.all,
+                                      Mode     => PP.Default);
+            begin
+               for S of Sources loop
+                  Pos_U := Pos_U + 1;
+                  Units (Pos_U) := Context.Get_From_File (Filename => To_String (S));
+               end loop;
+            end;
+         end loop;
+
+         pragma Assert (Count = Pos_U);
+
+         return Units;
+      end;
+   end Project_Units;
+
    ---------------------
    -- Analyze_Project --
    ---------------------
@@ -128,8 +178,8 @@ is
       Driver : Driv.Driver_Type'Class
          renames Option.Drivers (Option.Used_Driver).all;
 
-      Tree : GNATCOLL.Projects.Project_Tree_Access;
-      Env  : GNATCOLL.Projects.Project_Environment_Access;
+      Tree : GP.Project_Tree_Access;
+      Env  : GP.Project_Environment_Access;
    begin
       Tree := new GP.Project_Tree;
       GP.Initialize (Env);
@@ -152,63 +202,45 @@ is
             := Find_Definition (Context    => Context,
                                 Filename   => Find_Driver_Package (Projs, Tree),
                                 Subprogram => Driver.Unary_Operator);
+
+         Units : constant A.Analysis_Unit_Array
+            := Project_Units (Context => Context,
+                              Tree    => Tree,
+                              Projs   => Projs);
+
+         Results  : constant A.Ref_Result_Array
+            := Defining.P_Find_All_Calls (Units              => Units,
+                                          Follow_Renamings   => True,
+                                          Imprecise_Fallback => False);
       begin
 
-         for PAP of Projs.all loop
+         if Option.Verbose then
+            for U of Units loop
+               Put_Line (U.Get_Filename);
+            end loop;
+         end if;
+
+         for Result of Results loop
             declare
-               use Ada.Strings.Unbounded;
-
-               Sources : constant PP.Filename_Vectors.Vector
-                  := PP.Source_Files (Tree     => Tree.all,
-                                      Mode     => PP.Default);
+               Ref  : constant A.Base_Id'Class := A.Ref (Result);
+               Kind : constant String          := A.Kind (Result)'Image;
+               Text : constant String          := T.Image (Ref.Text);
+               Loc  : constant String          := Util.Location_Of (Ref);
             begin
-               if Option.Verbose then
-                  for Project of PAP.Projects.all loop
-                     Put_Line (Project.Name);
-                  end loop;
-               end if;
-
-               for Source_US of Sources loop
-                  declare
-                     Source  : constant String := To_String (Source_US);
-
-                     Unit    : constant A.Analysis_Unit_Array
-                        := (1 => Context.Get_From_File (Source));
-
-                     Results  : constant A.Ref_Result_Array
-                        := Defining.P_Find_All_Calls (Units              => Unit,
-                                                      Follow_Renamings   => True,
-                                                      Imprecise_Fallback => False);
-                  begin
-                     if Option.Verbose then
-                        Put_Line (Source);
-                     end if;
-
-                     for Result of Results loop
-                        declare
-                           Ref  : constant A.Base_Id'Class := A.Ref (Result);
-                           Kind : constant String          := A.Kind (Result)'Image;
-                           Text : constant String          := T.Image (Ref.Text);
-                           Loc  : constant String          := Util.Location_Of (Ref);
-                        begin
-                           Put     (Ref.Kind'Image);
-                           Set_Col (25);
-                           Put     (Kind);
-                           Set_Col (40);
-                           Put     (Text);
-                           Set_Col (60);
-                           Put     (Loc);
-                           New_Line;
-                        end;
-                     end loop;
-                  end;
-               end loop;
+               Put     (Ref.Kind'Image);
+               Set_Col (25);
+               Put     (Kind);
+               Set_Col (40);
+               Put     (Text);
+               Set_Col (60);
+               Put     (Loc);
+               New_Line;
             end;
          end loop;
          PP.Free (Projs);
       end;
-      GP.Free (Tree);
-      GP.Free (Env);
+--      GP.Free (Tree);
+--      GP.Free (Env);
    end Analyze_Project;
 
    -----------------------------
