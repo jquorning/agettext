@@ -28,7 +28,7 @@ package A18n_Options is
    -----------------
 
    type Driver_Kind is (
-      Driver_Intl,       --  By Stephen Carrez
+      Driver_Intl,       --  By Stephane Carrez
       Driver_L10n        --  By Jesper Quorning
       );
 
