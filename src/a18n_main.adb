@@ -1,9 +1,4 @@
 
---
---  usage
---    a18n proj.gpr
---
-
 with Ada.Characters.Handling;
 with Ada.Directories;
 with Ada.Strings.Fixed;
@@ -19,26 +14,51 @@ with Libadalang.Analysis;
 with Libadalang.Common;
 with Libadalang.Iterators;
 with Libadalang.Project_Provider;
+with Langkit_Support.Text;
 
 with A18n_Analysis;
 with A18n_Command_Line;
 with A18n_Config;
+with A18n_Driver;
 with A18n_Options;
 with A18n_POT;
+with A18n_Util;
 
 procedure A18n_Main
 is
+   package A            renames Libadalang.Analysis;
+   package C            renames Libadalang.Common;
    package Command_Line renames A18n_Command_Line;
+   package Driv         renames A18n_Driver;
+   package GP           renames GNATCOLL.Projects;
    package Option       renames A18n_Options;
    package POT          renames A18n_POT;
+   package PP           renames Libadalang.Project_Provider;
+   package T            renames Langkit_Support.Text;
+   package VFS          renames GNATCOLL.VFS;
+   package Util         renames A18n_Util;
 
    use Ada.Text_IO;
 
-   Program_Termination : exception;
+   Missing_Driver_Specification : exception;
+   Program_Termination          : exception;
 
    procedure Analyze_File      (Filename   : String;
                                 Short_Name : String);
-   procedure Analyze_Project   (Project_File : String);
+   procedure Analyze_Project   (Project_File : String)
+      with Unreferenced;
+   procedure Analyze_Project_2 (Project_File : String);
+--   function Units_From_Project (Projs : PP.Provider_And_Projects_Array_Access;
+--                                Tree  : GP.Project_Tree_Access;
+--                                Mode  : PP.Source_Files_Mode)
+--                                return String;  --  A.Analysis_Unit_Array;
+   function Find_Driver_Package (Projs : PP.Provider_And_Projects_Array_Access;
+                                 Tree  : GP.Project_Tree_Access)
+                                 return String;
+   function Find_Definition (Context    : in out A.Analysis_Context;
+                             Filename   : String;
+                             Subprogram : String)
+                             return A.Defining_Name'Class;
    procedure Handle_Help_And_Version;
    procedure Check_Driver;
    procedure Check_Project;
@@ -51,25 +71,20 @@ is
    procedure Analyze_File (Filename   : String;
                            Short_Name : String)
    is
-      use Libadalang.Analysis;
-      use Libadalang.Common;
       use Libadalang.Iterators;
 
-      Context : constant Analysis_Context := Create_Context;
-      Unit    : constant Analysis_Unit    := Context.Get_From_File (Filename);
-      Predic  : constant Ada_Node_Predicate
-         := Kind_Is (Ada_Call_Expr)
-         or Kind_Is (Ada_Un_Op);
---         or Kind_Is (Ada_String_Literal);
+      Context : constant A.Analysis_Context := A.Create_Context;
+      Unit    : constant A.Analysis_Unit    := Context.Get_From_File (Filename);
+      Predic  : constant Ada_Node_Predicate := Kind_Is (C.Ada_Call_Expr)
+                                            or Kind_Is (C.Ada_Un_Op);
       Iter    : Traverse_Iterator'Class     := Find (Unit.Root, Predic);
-      Node    : Ada_Node;
+      Node    : A.Ada_Node;
    begin
       while Iter.Next (Node) loop
          case Node.Kind is
-         when Ada_Call_Expr => A18n_Analysis.Analyze_Call_Expr (Node, Short_Name);
-         when Ada_Un_Op     => A18n_Analysis.Analyze_Un_Op     (Node, Short_Name);
---         when Ada_String_Literal => Analyze_Un_Op     (Node);
-         when others        => null;
+         when C.Ada_Call_Expr => A18n_Analysis.Analyze_Call_Expr (Node, Short_Name);
+         when C.Ada_Un_Op     => A18n_Analysis.Analyze_Un_Op     (Node, Short_Name);
+         when others          => null;
          end case;
       end loop;
    end Analyze_File;
@@ -83,13 +98,13 @@ is
       use Ada.Directories;
       package VFS renames GNATCOLL.VFS;
 
-      Tree  : GNATCOLL.Projects.Project_Tree_Access;
-      Env   : GNATCOLL.Projects.Project_Environment_Access;
+      Tree  : GP.Project_Tree_Access;
+      Env   : GP.Project_Environment_Access;
       Projs : Libadalang.Project_Provider.Provider_And_Projects_Array_Access;
       CWD   : constant String := Current_Directory;
    begin
-      Tree := new GNATCOLL.Projects.Project_Tree;
-      GNATCOLL.Projects.Initialize (Env);
+      Tree := new GP.Project_Tree;
+      GP.Initialize (Env);
       Tree.Load
         (Root_Project_Path => VFS.Create (VFS.Filesystem_String (Project_File)),
          Env               => Env);
@@ -130,45 +145,163 @@ is
       GNATCOLL.Projects.Free (Env);
    end Analyze_Project;
 
---    ------------------
---    -- Process_Unit --
---    ------------------
+   --------------------
+   -- Find_Definiton --
+   --------------------
 
---    procedure Process_Unit (Context : Libadalang.Helpers.App_Job_Context;
---                            Unit    : Libadalang.Analysis.Analysis_Unit)
---    is
---       pragma Unreferenced (Context);
+   function Find_Definition (Context    : in out A.Analysis_Context;
+                             Filename   : String;
+                             Subprogram : String)
+                             return A.Defining_Name'Class
+   is
+      use Libadalang.Iterators;
 
---       use Libadalang.Analysis;
---       use Libadalang.Common;
---       use Libadalang.Iterators;
+      Unit    : constant A.Analysis_Unit    := Context.Get_From_File (Filename);
+      Predic  : constant Ada_Node_Predicate := Kind_Is (C.Ada_Defining_Name);
+      Iter    : Traverse_Iterator'Class     := Find (Unit.Root, Predic);
+      Node    : A.Ada_Node;
+   begin
+      while Iter.Next (Node) loop
+         declare
+            Defining : constant A.Defining_Name'Class := Node.As_Defining_Name;
+         begin
+            if Subprogram = T.Image (Defining.Text) then
+               return Defining;
+            end if;
+         end;
+      end loop;
+      return A.No_Defining_Name;
+   end Find_Definition;
 
---       Predic  : constant Ada_Node_Predicate
---          := Kind_Is (Ada_Call_Expr)
---          or Kind_Is (Ada_Un_Op)
---          or Kind_Is (Ada_String_Literal);
---       Iter    : Traverse_Iterator'Class     := Find (Unit.Root, Predic);
---       Node    : Ada_Node;
---    begin
---       while Iter.Next (Node) loop
---          case Node.Kind is
---          when Ada_Call_Expr      => Analyze_Call_Expr (Node);
---          when Ada_Un_Op          => Analyze_Un_Op     (Node);
---  --         when Ada_String_Literal => Analyze_Un_Op     (Node);
---          when others             => null;
---          end case;
---       end loop;
---    end Process_Unit;
+   -------------------------
+   -- Find_Driver_Package --
+   -------------------------
 
---    -----------------
---    -- Application --
---    -----------------
+   function Find_Driver_Package (Projs : PP.Provider_And_Projects_Array_Access;
+                                 Tree  : GP.Project_Tree_Access)
+                                 return String
+   is
+      use Ada.Strings.Fixed;
+      use Ada.Strings.Unbounded;
 
---    package Application is new
---       Libadalang.Helpers.App
---         (Name         => A18n_Config.Crate_Name,
---          Description  => "Ada pendant to `gettext`",
---          Process_Unit => Process_Unit);
+      Driver : Driv.Driver_Type'Class
+         renames Option.Drivers (Option.Used_Driver).all;
+
+      Spec_File : constant String := Driver.Package_Name & ".ads";
+   begin
+      for PAP of Projs.all loop
+         declare
+            Sources : constant PP.Filename_Vectors.Vector
+               := PP.Source_Files (Tree => Tree.all,
+                                   Mode => PP.Default);
+         begin
+            for Source_US of Sources loop
+               declare
+                  Source : constant String := To_String (Source_US);
+               begin
+                  if Tail (Source, Spec_File'Length) = Spec_File then
+                     return Source;
+                  end if;
+               end;
+            end loop;
+         end;
+      end loop;
+      raise Missing_Driver_Specification;
+   end Find_Driver_Package;
+
+   -----------------------
+   -- Analyze_Project_2 --
+   -----------------------
+
+   procedure Analyze_Project_2 (Project_File : String)
+   is
+      Driver : Driv.Driver_Type'Class
+         renames Option.Drivers (Option.Used_Driver).all;
+
+      Tree : GNATCOLL.Projects.Project_Tree_Access;
+      Env  : GNATCOLL.Projects.Project_Environment_Access;
+   begin
+      Tree := new GNATCOLL.Projects.Project_Tree;
+      GNATCOLL.Projects.Initialize (Env);
+      Tree.Load
+        (Root_Project_Path => VFS.Create (VFS.Filesystem_String (Project_File)),
+         Env               => Env);
+
+      declare
+         Projs : PP.Provider_And_Projects_Array_Access
+            := PP.Create_Project_Unit_Providers (Tree);
+
+         Provider : constant A.Unit_Provider_Reference
+            := PP.Create_Project_Unit_Provider (Tree => Tree,
+                                                Env  => Env);
+
+         Context  : A.Analysis_Context
+            := A.Create_Context (Unit_Provider => Provider);
+
+         Defining : constant A.Defining_Name'Class
+            := Find_Definition (Context    => Context,
+                                Filename   => Find_Driver_Package (Projs, Tree),
+                                Subprogram => Driver.Unary_Operator);
+      begin
+
+         for PAP of Projs.all loop
+            declare
+               use Ada.Strings.Unbounded;
+               use PP;
+
+               Sources : constant Filename_Vectors.Vector
+                  := Source_Files (Tree     => Tree.all,
+                                   Mode     => Root_Project);
+            begin
+               if Option.Verbose then
+                  for Project of PAP.Projects.all loop
+                     Put_Line (Project.Name);
+                  end loop;
+               end if;
+
+               for Source_US of Sources loop
+                  declare
+                     Source  : constant String := To_String (Source_US);
+
+                     Unit    : constant A.Analysis_Unit_Array
+                        := (1 => Context.Get_From_File (Source));
+
+                     Results  : constant A.Ref_Result_Array
+                        := Defining.P_Find_All_Calls (Units              => Unit,
+                                                      Follow_Renamings   => True,
+                                                      Imprecise_Fallback => False);
+                  begin
+                     if Option.Verbose then
+                        Put_Line (Source);
+                     end if;
+
+                     for Result of Results loop
+                        declare
+                           Ref  : constant A.Base_Id'Class := A.Ref (Result);
+                           Kind : constant String          := A.Kind (Result)'Image;
+                           Text : constant String          := T.Image (Ref.Text);
+                           Loc  : constant String          := Util.Location_Of (Ref);
+                        begin
+                           Put     (Ref.Kind'Image);
+                           Set_Col (25);
+                           Put     (Kind);
+                           Set_Col (40);
+                           Put     (Text);
+                           Set_Col (60);
+                           Put     (Loc);
+                           New_Line;
+                        end;
+                     end loop;
+                  end;
+               end loop;
+            end;
+         end loop;
+         PP.Free (Projs);
+      end;
+
+      GP.Free (Tree);
+      GP.Free (Env);
+   end Analyze_Project_2;
 
    -----------------------------
    -- Handle_Help_And_Version --
@@ -270,12 +403,11 @@ begin
    Check_Project;
    Check_Output;
 
---   POT.Put_Entry ("a18n_main.adb", 117, "Hello, World!", "Test");
-
-   Analyze_Project (Option.Project.all);
+   Analyze_Project_2 (Option.Project.all);
+--   Analyze_Project (Option.Project.all);
 
    Command_Line.Free;
---   Application.Run;
+
 exception
    when Program_Termination =>
       null;
@@ -285,4 +417,9 @@ exception
 
    when Command_Line.Invalid_Parameter =>
       Put_Line (Standard_Error, "Invalid parameter. Exiting");
+
+   when Missing_Driver_Specification =>
+      Put_Line (Standard_Error,
+                "'" & Option.Drivers (Option.Used_Driver).all.Package_Name &
+                ".ads" & "' is not part of the project. Exiting");
 end A18n_Main;
