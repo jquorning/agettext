@@ -16,7 +16,6 @@ with Libadalang.Iterators;
 with Libadalang.Project_Provider;
 with Langkit_Support.Text;
 
-with A18n_Analysis;
 with A18n_Command_Line;
 with A18n_Config;
 with A18n_Driver;
@@ -43,15 +42,7 @@ is
    Missing_Driver_Specification : exception;
    Program_Termination          : exception;
 
-   procedure Analyze_File      (Filename   : String;
-                                Short_Name : String);
-   procedure Analyze_Project   (Project_File : String)
-      with Unreferenced;
-   procedure Analyze_Project_2 (Project_File : String);
---   function Units_From_Project (Projs : PP.Provider_And_Projects_Array_Access;
---                                Tree  : GP.Project_Tree_Access;
---                                Mode  : PP.Source_Files_Mode)
---                                return String;  --  A.Analysis_Unit_Array;
+   procedure Analyze_Project (Project_File : String);
    function Find_Driver_Package (Projs : PP.Provider_And_Projects_Array_Access;
                                  Tree  : GP.Project_Tree_Access)
                                  return String;
@@ -63,87 +54,6 @@ is
    procedure Check_Driver;
    procedure Check_Project;
    procedure Check_Output;
-
-   ------------------
-   -- Analyze_File --
-   ------------------
-
-   procedure Analyze_File (Filename   : String;
-                           Short_Name : String)
-   is
-      use Libadalang.Iterators;
-
-      Context : constant A.Analysis_Context := A.Create_Context;
-      Unit    : constant A.Analysis_Unit    := Context.Get_From_File (Filename);
-      Predic  : constant Ada_Node_Predicate := Kind_Is (C.Ada_Call_Expr)
-                                            or Kind_Is (C.Ada_Un_Op);
-      Iter    : Traverse_Iterator'Class     := Find (Unit.Root, Predic);
-      Node    : A.Ada_Node;
-   begin
-      while Iter.Next (Node) loop
-         case Node.Kind is
-         when C.Ada_Call_Expr => A18n_Analysis.Analyze_Call_Expr (Node, Short_Name);
-         when C.Ada_Un_Op     => A18n_Analysis.Analyze_Un_Op     (Node, Short_Name);
-         when others          => null;
-         end case;
-      end loop;
-   end Analyze_File;
-
-   ---------------------
-   -- Analyze_Project --
-   ---------------------
-
-   procedure Analyze_Project (Project_File : String)
-   is
-      use Ada.Directories;
-      package VFS renames GNATCOLL.VFS;
-
-      Tree  : GP.Project_Tree_Access;
-      Env   : GP.Project_Environment_Access;
-      Projs : Libadalang.Project_Provider.Provider_And_Projects_Array_Access;
-      CWD   : constant String := Current_Directory;
-   begin
-      Tree := new GP.Project_Tree;
-      GP.Initialize (Env);
-      Tree.Load
-        (Root_Project_Path => VFS.Create (VFS.Filesystem_String (Project_File)),
-         Env               => Env);
-
-      Projs := Libadalang.Project_Provider.Create_Project_Unit_Providers (Tree);
-
-      for PAP of Projs.all loop
-
-         declare
-            use Ada.Strings.Unbounded;
-            use Libadalang.Project_Provider;
-
-            Sources : constant Filename_Vectors.Vector
-               := Source_Files (Tree     => Tree.all,
-                                Mode     => Root_Project);
-         begin
-            for Source_US of Sources loop
-               declare
-                  use Ada.Strings.Fixed;
-
-                  Source   : constant String := To_String (Source_US);
-                  Relative : constant String
-                     := Tail (Source, Source'Length - CWD'Length - 1);
-               begin
-                  if Option.Verbose then
-                     Put_Line (Relative);
-                  end if;
-
-                  Analyze_File (Filename   => Source,
-                                Short_Name => Relative);
-               end;
-            end loop;
-         end;
-      end loop;
-      Libadalang.Project_Provider.Free (Projs);
-
-      GNATCOLL.Projects.Free (Tree);
-      GNATCOLL.Projects.Free (Env);
-   end Analyze_Project;
 
    --------------------
    -- Find_Definiton --
@@ -209,11 +119,11 @@ is
       raise Missing_Driver_Specification;
    end Find_Driver_Package;
 
-   -----------------------
-   -- Analyze_Project_2 --
-   -----------------------
+   ---------------------
+   -- Analyze_Project --
+   ---------------------
 
-   procedure Analyze_Project_2 (Project_File : String)
+   procedure Analyze_Project (Project_File : String)
    is
       Driver : Driv.Driver_Type'Class
          renames Option.Drivers (Option.Used_Driver).all;
@@ -221,8 +131,8 @@ is
       Tree : GNATCOLL.Projects.Project_Tree_Access;
       Env  : GNATCOLL.Projects.Project_Environment_Access;
    begin
-      Tree := new GNATCOLL.Projects.Project_Tree;
-      GNATCOLL.Projects.Initialize (Env);
+      Tree := new GP.Project_Tree;
+      GP.Initialize (Env);
       Tree.Load
         (Root_Project_Path => VFS.Create (VFS.Filesystem_String (Project_File)),
          Env               => Env);
@@ -247,11 +157,10 @@ is
          for PAP of Projs.all loop
             declare
                use Ada.Strings.Unbounded;
-               use PP;
 
-               Sources : constant Filename_Vectors.Vector
-                  := Source_Files (Tree     => Tree.all,
-                                   Mode     => Root_Project);
+               Sources : constant PP.Filename_Vectors.Vector
+                  := PP.Source_Files (Tree     => Tree.all,
+                                      Mode     => PP.Default);
             begin
                if Option.Verbose then
                   for Project of PAP.Projects.all loop
@@ -298,10 +207,9 @@ is
          end loop;
          PP.Free (Projs);
       end;
-
       GP.Free (Tree);
       GP.Free (Env);
-   end Analyze_Project_2;
+   end Analyze_Project;
 
    -----------------------------
    -- Handle_Help_And_Version --
@@ -403,8 +311,7 @@ begin
    Check_Project;
    Check_Output;
 
-   Analyze_Project_2 (Option.Project.all);
---   Analyze_Project (Option.Project.all);
+   Analyze_Project (Option.Project.all);
 
    Command_Line.Free;
 
