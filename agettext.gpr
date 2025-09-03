@@ -1,9 +1,9 @@
-with "config/a18n_config.gpr";
+with "config/agettext_config.gpr";
 
-project A18n is
+project Agettext is
 
    for Source_Dirs use ("src/", "config/");
-   for Object_Dir use "obj/" & A18n_Config.Build_Profile;
+   for Object_Dir use "obj/" & Agettext_Config.Build_Profile;
    for Create_Missing_Dirs use "True";
    for Exec_Dir use "bin";
    for Main use ("a18n_main.adb");
@@ -16,11 +16,13 @@ project A18n is
       for Local_Configuration_Pragmas use "src/a18n.adc";
 
       for Default_Switches ("Ada") use
-         A18n_Config.Ada_Compiler_Switches & (
+         Agettext_Config.Ada_Compiler_Switches & (
             "-ffunction-sections",
             "-fdata-sections",
             "-g",
             "-O1",
+            "-gnata",
+            "-gnatf",
             "-gnatwa",
             "-gnatyyM90"
          );
@@ -39,4 +41,4 @@ project A18n is
       for Artifacts (".") use ("share");
    end Install;
 
-end A18n;
+end Agettext;

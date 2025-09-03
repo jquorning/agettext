@@ -1,4 +1,4 @@
-name = "a18n"
+name = "agettext"
 description = "Ada internationalization tool"
 long-description = '''
 This is an Ada pendant to `xgettext`.
@@ -10,7 +10,7 @@ maintainers = ["Jesper Quorning <jesper.quorning@gmail.com>"]
 maintainers-logins = ["jquorning"]
 licenses = "Apache-2.0"
 website = "https://github.com/jquorning/a18n"
-tags = ["i18n", "l10n", "nls", "gettext"]
+tags = ["i18n", "l10n", "nls", "gettext", "xgettext"]
 
 executables = ["agettext"]
 

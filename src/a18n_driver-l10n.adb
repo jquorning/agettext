@@ -1,5 +1,9 @@
 
+with A18n_Util;
+
 package body A18n_Driver.L10n is
+
+   package Util renames A18n_Util;
 
    -----------------
    -- Driver_Name --
@@ -27,6 +31,6 @@ package body A18n_Driver.L10n is
    --------------------
 
    function Unary_Operator (Driver : Driver_Type) return String
-   is ("abs");
+   is (Util.Quote ("abs"));
 
 end A18n_Driver.L10n;
