@@ -59,6 +59,16 @@ is
                            Tree    : GP.Project_Tree_Access;
                            Projs   : PP.Provider_And_Projects_Array_Access)
                            return A.Analysis_Unit_Array;
+   procedure Analyze (Node     : A.Base_Id'Class;
+                      Filename : String);
+   procedure Handle_Paren_Expr (Node     : A.Paren_Expr'Class;
+                                Filename : String);
+   procedure Handle_Call_Expr (Node     : A.Call_Expr'Class;
+                               Filename : String);
+   procedure Handle_Un_Op  (Node     : A.Un_Op'Class;
+                            Filename : String);
+   function Relative (Full : String;
+                      Base : String) return String;
    procedure Handle_Help_And_Version;
    procedure Check_Driver;
    procedure Check_Project;
@@ -174,6 +184,157 @@ is
       end;
    end Project_Units;
 
+   ----------------------
+   -- Handle_Call_Expr --
+   ----------------------
+
+   procedure Handle_Call_Expr (Node     : A.Call_Expr'Class;
+                               Filename : String)
+   is
+      use type C.Ada_Node_Kind_Type;
+
+      First  : constant A.Ada_Node           := Node.First_Child;
+      Last   : constant A.Ada_Node           := Node.Last_Child;
+      Assoc  : constant A.Assoc_List         := Last.As_Assoc_List;
+      Params : constant A.Param_Actual_Array := Assoc.P_Zip_With_Params;
+   begin
+      pragma Assert (Params'Length = 1);
+      pragma Assert (First.Kind in C.Ada_Dotted_Name | C.Ada_String_Literal);
+
+      declare
+         Actual : constant A.Expr'Class
+            := A.Actual (Params (Params'First));
+      begin
+         if Actual.Kind = C.Ada_String_Literal then
+            POT.Put_Entry
+                  (Source_Name   => Filename,
+                   Text          => Util.Un_Quote (T.Image (Actual.Text)),
+                   Line_Number   => Actual.Sloc_Range.Start_Line,
+                   Column_Number => Actual.Sloc_Range.Start_Column,
+                   Comment       => "");
+         end if;
+      end;
+
+   end Handle_Call_Expr;
+
+   -----------------------
+   -- Handle_Paren_Expr --
+   -----------------------
+
+   procedure Handle_Paren_Expr (Node     : A.Paren_Expr'Class;
+                                Filename : String)
+   is
+      First : constant A.Ada_Node := Node.First_Child;
+      Last  : constant A.Ada_Node := Node.Last_Child;
+   begin
+      if Last.Kind in C.Ada_Paren_Expr then
+         Handle_Paren_Expr (Last.As_Paren_Expr, Filename);
+         return;
+      end if;
+
+      POT.Put_Entry
+            (Source_Name   => Filename,
+             Text          => Util.Un_Quote (T.Image (First.Text)),
+             Line_Number   => First.Sloc_Range.Start_Line,
+             Column_Number => First.Sloc_Range.Start_Column,
+             Comment       => "");
+   end Handle_Paren_Expr;
+
+   ------------------
+   -- Handle_Un_Op --
+   ------------------
+
+   procedure Handle_Un_Op (Node     : A.Un_Op'Class;
+                           Filename : String)
+   is
+      use Ada.Strings;
+      use type C.Ada_Node_Kind_Type;
+
+      First  : constant A.Ada_Node           := Node.First_Child;
+      Last   : constant A.Ada_Node           := Node.Last_Child;
+   begin
+      pragma Assert (First.Kind in C.Ada_Op_Minus
+                                 | C.Ada_Op_Plus
+                                 | C.Ada_Op_Abs
+                                 | C.Ada_Op_Not);
+
+      if Last.Kind = C.Ada_Paren_Expr then
+         Handle_Paren_Expr (Last.As_Paren_Expr, Filename);
+         return;
+
+      elsif Last.Kind /= C.Ada_String_Literal then
+         Put_Line (Standard_Error,
+                   Filename &
+                   ":" & Fixed.Trim (Node.Sloc_Range.Start_Line'Image,   Left) &
+                   ":" & Fixed.Trim (Node.Sloc_Range.Start_Column'Image, Left) &
+                   ": warning: Can not translate this");
+         return;
+      end if;
+
+      declare
+         Literal : constant A.String_Literal := Last.As_String_Literal;
+      begin
+         POT.Put_Entry
+               (Source_Name   => Filename,
+                Text          => Util.Un_Quote (T.Image (Literal.Text)),
+                Line_Number   => Literal.Sloc_Range.Start_Line,
+                Column_Number => Literal.Sloc_Range.Start_Column,
+                Comment       => "");
+      end;
+   end Handle_Un_Op;
+
+   -------------
+   -- Analyze --
+   -------------
+
+   procedure Analyze (Node     : A.Base_Id'Class;
+                      Filename : String)
+   is
+      use type C.Ada_Node_Kind_Type;
+
+      Text : constant String := T.Image (Node.Text);
+      Loc  : constant String := Util.Location_Of (Node);
+   begin
+      if Option.Debug then
+         Put     (Node.Kind'Image);
+         Set_Col (40);
+         Put     (Text);
+         Set_Col (60);
+         Put     (Loc);
+         New_Line;
+      end if;
+
+      if Node.Kind = C.Ada_String_Literal then
+         declare
+            Next    : constant A.Ada_Node := Node.Next_Sibling;
+            Prev    : constant A.Ada_Node := Node.Previous_Sibling;
+         begin
+            if Next in A.No_Ada_Node then
+               Handle_Call_Expr (Prev.Parent.Parent.As_Call_Expr, Filename);
+            else
+               Handle_Call_Expr (Next.Parent.As_Call_Expr, Filename);
+            end if;
+         end;
+      else
+         declare
+            Parent : constant A.Ada_Node := Node.Parent;
+         begin
+            Handle_Un_Op (Parent.As_Un_Op, Filename);
+         end;
+      end if;
+   end Analyze;
+
+   --------------
+   -- Relative --
+   --------------
+
+   function Relative (Full : String;
+                      Base : String) return String
+   is
+   begin
+      return Ada.Strings.Fixed.Tail (Full, Full'Length - Base'Length - 1);
+   end Relative;
+
    ---------------------
    -- Analyze_Project --
    ---------------------
@@ -183,6 +344,7 @@ is
       Driver : Driv.Driver_Type'Class
          renames Option.Drivers (Option.Used_Driver).all;
 
+      CWD  : constant String         := Ada.Directories.Current_Directory;
       Tree : GP.Project_Tree_Access;
       Env  : GP.Project_Environment_Access;
    begin
@@ -226,21 +388,9 @@ is
          end if;
 
          for Result of Results loop
-            declare
-               Ref  : constant A.Base_Id'Class := A.Ref (Result);
-               Kind : constant String          := A.Kind (Result)'Image;
-               Text : constant String          := T.Image (Ref.Text);
-               Loc  : constant String          := Util.Location_Of (Ref);
-            begin
-               Put     (Ref.Kind'Image);
-               Set_Col (25);
-               Put     (Kind);
-               Set_Col (40);
-               Put     (Text);
-               Set_Col (60);
-               Put     (Loc);
-               New_Line;
-            end;
+            Analyze (Node     => A.Ref (Result),
+                     Filename => Relative (Full => A.Ref (Result).Unit.Get_Filename,
+                                           Base => CWD));
          end loop;
          PP.Free (Projs);
       end;
