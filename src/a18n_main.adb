@@ -17,11 +17,16 @@ with Libadalang.Project_Provider;
 with Langkit_Support.Text;
 
 with A18n_Command_Line;
-with A18n_Config;
 with A18n_Driver;
 with A18n_Options;
 with A18n_POT;
 with A18n_Util;
+
+with Agettext_Config;
+
+---------------
+-- A18n_Main --
+---------------
 
 procedure A18n_Main
 is
@@ -255,8 +260,8 @@ is
          raise Program_Termination;
 
       elsif Option.Version then
-         Put_Line (A18n_Config.Crate_Name &
-                   " version " & A18n_Config.Crate_Version);
+         Put_Line (Agettext_Config.Crate_Name &
+                   " version " & Agettext_Config.Crate_Version);
          raise Program_Termination;
       end if;
    end Handle_Help_And_Version;
