@@ -93,8 +93,10 @@ is
       while Iter.Next (Node) loop
          declare
             Defining : constant A.Defining_Name'Class := Node.As_Defining_Name;
+            Name     : constant String
+               := Ada.Characters.Handling.To_Lower (T.Image (Defining.Text));
          begin
-            if Subprogram = T.Image (Defining.Text) then
+            if Name = Subprogram then
                return Defining;
             end if;
          end;
@@ -193,13 +195,13 @@ is
    is
       use type C.Ada_Node_Kind_Type;
 
-      First  : constant A.Ada_Node           := Node.First_Child;
+--      First  : constant A.Ada_Node           := Node.First_Child;
       Last   : constant A.Ada_Node           := Node.Last_Child;
       Assoc  : constant A.Assoc_List         := Last.As_Assoc_List;
       Params : constant A.Param_Actual_Array := Assoc.P_Zip_With_Params;
    begin
       pragma Assert (Params'Length = 1);
-      pragma Assert (First.Kind in C.Ada_Dotted_Name | C.Ada_String_Literal);
+--      pragma Assert (First.Kind in C.Ada_Dotted_Name | C.Ada_String_Literal);
 
       declare
          Actual : constant A.Expr'Class
@@ -304,7 +306,8 @@ is
          New_Line;
       end if;
 
-      if Node.Kind = C.Ada_String_Literal then
+      case Node.Kind is
+      when C.Ada_String_Literal =>
          declare
             Next    : constant A.Ada_Node := Node.Next_Sibling;
             Prev    : constant A.Ada_Node := Node.Previous_Sibling;
@@ -315,13 +318,35 @@ is
                Handle_Call_Expr (Next.Parent.As_Call_Expr, Filename);
             end if;
          end;
-      else
+
+      when C.Ada_Identifier =>
+         case Node.Parent.Kind is
+         when C.Ada_Call_Expr   =>
+            Handle_Call_Expr (Node.Parent.As_Call_Expr, Filename);
+         when C.Ada_Dotted_Name =>
+            Handle_Call_Expr (Node.Parent.Parent.As_Call_Expr, Filename);
+         when others            =>
+            pragma Assert (False);
+         end case;
+
+      when C.Ada_Op_Minus
+         | C.Ada_Op_Plus
+         | C.Ada_Op_Abs
+         | C.Ada_Op_Not  =>
          declare
             Parent : constant A.Ada_Node := Node.Parent;
          begin
-            Handle_Un_Op (Parent.As_Un_Op, Filename);
+            case Parent.Kind is
+            when C.Ada_Un_Op =>
+               Handle_Un_Op (Parent.As_Un_Op, Filename);
+            when others =>
+               pragma Assert (False);
+            end case;
          end;
-      end if;
+
+      when others =>
+         pragma Assert (False);
+      end case;
    end Analyze;
 
    --------------
@@ -365,20 +390,30 @@ is
          Context  : A.Analysis_Context
             := A.Create_Context (Unit_Provider => Provider);
 
-         Defining : constant A.Defining_Name'Class
-            := Find_Definition (Context    => Context,
-                                Filename   => Find_Driver_Package (Projs, Tree),
-                                Subprogram => Driver.Unary_Operator);
-
          Units : constant A.Analysis_Unit_Array
             := Project_Units (Context => Context,
                               Tree    => Tree,
                               Projs   => Projs);
 
-         Results  : constant A.Ref_Result_Array
-            := Defining.P_Find_All_Calls (Units              => Units,
-                                          Follow_Renamings   => True,
-                                          Imprecise_Fallback => False);
+         Defining_1 : constant A.Defining_Name'Class
+            := Find_Definition (Context    => Context,
+                                Filename   => Find_Driver_Package (Projs, Tree),
+                                Subprogram => Driver.Unary_Operator);
+
+         Results_1  : constant A.Ref_Result_Array
+            := Defining_1.P_Find_All_Calls (Units              => Units,
+                                            Follow_Renamings   => True,
+                                            Imprecise_Fallback => False);
+
+         Defining_2 : constant A.Defining_Name'Class
+            := Find_Definition (Context    => Context,
+                                Filename   => Find_Driver_Package (Projs, Tree),
+                                Subprogram => Driver.Regular_Function);
+
+         Results_2  : constant A.Ref_Result_Array
+            := Defining_2.P_Find_All_Calls (Units              => Units,
+                                            Follow_Renamings   => True,
+                                            Imprecise_Fallback => False);
       begin
 
          if Option.Verbose then
@@ -387,11 +422,18 @@ is
             end loop;
          end if;
 
-         for Result of Results loop
+         for Result of Results_1 loop
             Analyze (Node     => A.Ref (Result),
                      Filename => Relative (Full => A.Ref (Result).Unit.Get_Filename,
                                            Base => CWD));
          end loop;
+
+         for Result of Results_2 loop
+            Analyze (Node     => A.Ref (Result),
+                     Filename => Relative (Full => A.Ref (Result).Unit.Get_Filename,
+                                           Base => CWD));
+         end loop;
+
          PP.Free (Projs);
       end;
 --      GP.Free (Tree);
