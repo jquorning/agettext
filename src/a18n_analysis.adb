@@ -165,7 +165,7 @@ is
       begin
          if Actual.Kind = C.Ada_String_Literal then
             POT.Put_Entry
-                  (Source_Name   => Relative (Node.Unit.Get_Filename, CWD.all),
+                  (Source_Name   => Util.Relative (Node.Unit.Get_Filename, CWD.all),
                    Text          => Util.Un_Quote (T.Image (Actual.Text)),
                    Line_Number   => Actual.Sloc_Range.Start_Line,
                    Column_Number => Actual.Sloc_Range.Start_Column,
@@ -190,7 +190,7 @@ is
       end if;
 
       POT.Put_Entry
-            (Source_Name   => Relative (Node.Unit.Get_Filename, CWD.all),
+            (Source_Name   => Util.Relative (Node.Unit.Get_Filename, CWD.all),
              Text          => Util.Un_Quote (T.Image (First.Text)),
              Line_Number   => First.Sloc_Range.Start_Line,
              Column_Number => First.Sloc_Range.Start_Column,
@@ -231,7 +231,7 @@ is
          Literal : constant A.String_Literal := Last.As_String_Literal;
       begin
          POT.Put_Entry
-               (Source_Name   => Relative (Node.Unit.Get_Filename, CWD.all),
+               (Source_Name   => Util.Relative (Node.Unit.Get_Filename, CWD.all),
                 Text          => Util.Un_Quote (T.Image (Literal.Text)),
                 Line_Number   => Literal.Sloc_Range.Start_Line,
                 Column_Number => Literal.Sloc_Range.Start_Column,
@@ -301,17 +301,6 @@ is
          pragma Assert (False);
       end case;
    end Analyze;
-
-   --------------
-   -- Relative --
-   --------------
-
-   function Relative (Full : String;
-                      Base : String) return String
-   is
-   begin
-      return Ada.Strings.Fixed.Tail (Full, Full'Length - Base'Length - 1);
-   end Relative;
 
    ---------------------
    -- Analyze_Project --
