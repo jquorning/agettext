@@ -24,14 +24,10 @@ package A18n_Analysis is
                            Tree    : GP.Project_Tree_Access;
                            Projs   : PP.Provider_And_Projects_Array_Access)
                            return A.Analysis_Unit_Array;
-   procedure Analyze (Node     : A.Base_Id'Class;
-                      Filename : String);
-   procedure Handle_Paren_Expr (Node     : A.Paren_Expr'Class;
-                                Filename : String);
-   procedure Handle_Call_Expr (Node     : A.Call_Expr'Class;
-                               Filename : String);
-   procedure Handle_Un_Op  (Node     : A.Un_Op'Class;
-                            Filename : String);
+   procedure Analyze (Node     : A.Base_Id'Class);
+   procedure Handle_Paren_Expr (Node     : A.Paren_Expr'Class);
+   procedure Handle_Call_Expr (Node     : A.Call_Expr'Class);
+   procedure Handle_Un_Op  (Node     : A.Un_Op'Class);
    function Relative (Full : String;
                       Base : String) return String;
 

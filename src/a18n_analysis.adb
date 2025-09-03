@@ -5,6 +5,7 @@ with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 
+with GNAT.Strings;
 with GNATCOLL.VFS;
 
 with Libadalang.Common;
@@ -27,6 +28,8 @@ is
    package Util         renames A18n_Util;
 
    use Ada.Text_IO;
+
+   CWD : GNAT.Strings.String_Access := null;
 
    --------------------
    -- Find_Definiton --
@@ -144,8 +147,7 @@ is
    -- Handle_Call_Expr --
    ----------------------
 
-   procedure Handle_Call_Expr (Node     : A.Call_Expr'Class;
-                               Filename : String)
+   procedure Handle_Call_Expr (Node     : A.Call_Expr'Class)
    is
       use type C.Ada_Node_Kind_Type;
 
@@ -163,7 +165,7 @@ is
       begin
          if Actual.Kind = C.Ada_String_Literal then
             POT.Put_Entry
-                  (Source_Name   => Filename,
+                  (Source_Name   => Relative (Node.Unit.Get_Filename, CWD.all),
                    Text          => Util.Un_Quote (T.Image (Actual.Text)),
                    Line_Number   => Actual.Sloc_Range.Start_Line,
                    Column_Number => Actual.Sloc_Range.Start_Column,
@@ -177,19 +179,18 @@ is
    -- Handle_Paren_Expr --
    -----------------------
 
-   procedure Handle_Paren_Expr (Node     : A.Paren_Expr'Class;
-                                Filename : String)
+   procedure Handle_Paren_Expr (Node     : A.Paren_Expr'Class)
    is
       First : constant A.Ada_Node := Node.First_Child;
       Last  : constant A.Ada_Node := Node.Last_Child;
    begin
       if Last.Kind in C.Ada_Paren_Expr then
-         Handle_Paren_Expr (Last.As_Paren_Expr, Filename);
+         Handle_Paren_Expr (Last.As_Paren_Expr);
          return;
       end if;
 
       POT.Put_Entry
-            (Source_Name   => Filename,
+            (Source_Name   => Relative (Node.Unit.Get_Filename, CWD.all),
              Text          => Util.Un_Quote (T.Image (First.Text)),
              Line_Number   => First.Sloc_Range.Start_Line,
              Column_Number => First.Sloc_Range.Start_Column,
@@ -200,8 +201,7 @@ is
    -- Handle_Un_Op --
    ------------------
 
-   procedure Handle_Un_Op (Node     : A.Un_Op'Class;
-                           Filename : String)
+   procedure Handle_Un_Op (Node     : A.Un_Op'Class)
    is
       use Ada.Strings;
       use type C.Ada_Node_Kind_Type;
@@ -215,12 +215,12 @@ is
                                  | C.Ada_Op_Not);
 
       if Last.Kind = C.Ada_Paren_Expr then
-         Handle_Paren_Expr (Last.As_Paren_Expr, Filename);
+         Handle_Paren_Expr (Last.As_Paren_Expr);
          return;
 
       elsif Last.Kind /= C.Ada_String_Literal then
          Put_Line (Standard_Error,
-                   Filename &
+                   Node.Unit.Get_Filename &
                    ":" & Fixed.Trim (Node.Sloc_Range.Start_Line'Image,   Left) &
                    ":" & Fixed.Trim (Node.Sloc_Range.Start_Column'Image, Left) &
                    ": warning: Can not translate this");
@@ -231,7 +231,7 @@ is
          Literal : constant A.String_Literal := Last.As_String_Literal;
       begin
          POT.Put_Entry
-               (Source_Name   => Filename,
+               (Source_Name   => Relative (Node.Unit.Get_Filename, CWD.all),
                 Text          => Util.Un_Quote (T.Image (Literal.Text)),
                 Line_Number   => Literal.Sloc_Range.Start_Line,
                 Column_Number => Literal.Sloc_Range.Start_Column,
@@ -243,8 +243,7 @@ is
    -- Analyze --
    -------------
 
-   procedure Analyze (Node     : A.Base_Id'Class;
-                      Filename : String)
+   procedure Analyze (Node     : A.Base_Id'Class)
    is
       use type C.Ada_Node_Kind_Type;
 
@@ -267,18 +266,18 @@ is
             Prev    : constant A.Ada_Node := Node.Previous_Sibling;
          begin
             if Next in A.No_Ada_Node then
-               Handle_Call_Expr (Prev.Parent.Parent.As_Call_Expr, Filename);
+               Handle_Call_Expr (Prev.Parent.Parent.As_Call_Expr);
             else
-               Handle_Call_Expr (Next.Parent.As_Call_Expr, Filename);
+               Handle_Call_Expr (Next.Parent.As_Call_Expr);
             end if;
          end;
 
       when C.Ada_Identifier =>
          case Node.Parent.Kind is
          when C.Ada_Call_Expr   =>
-            Handle_Call_Expr (Node.Parent.As_Call_Expr, Filename);
+            Handle_Call_Expr (Node.Parent.As_Call_Expr);
          when C.Ada_Dotted_Name =>
-            Handle_Call_Expr (Node.Parent.Parent.As_Call_Expr, Filename);
+            Handle_Call_Expr (Node.Parent.Parent.As_Call_Expr);
          when others            =>
             pragma Assert (False);
          end case;
@@ -292,7 +291,7 @@ is
          begin
             case Parent.Kind is
             when C.Ada_Un_Op =>
-               Handle_Un_Op (Parent.As_Un_Op, Filename);
+               Handle_Un_Op (Parent.As_Un_Op);
             when others =>
                pragma Assert (False);
             end case;
@@ -323,10 +322,12 @@ is
       Driver : Driv.Driver_Type'Class
          renames Option.Drivers (Option.Used_Driver).all;
 
-      CWD  : constant String         := Ada.Directories.Current_Directory;
       Tree : GP.Project_Tree_Access;
       Env  : GP.Project_Environment_Access;
    begin
+      CWD := new String'(Ada.Directories.Current_Directory);
+      --  Setup CWD for relative filenames in POT.
+
       Tree := new GP.Project_Tree;
       GP.Initialize (Env);
       Tree.Load
@@ -377,15 +378,11 @@ is
          end if;
 
          for Result of Results_1 loop
-            Analyze (Node     => A.Ref (Result),
-                     Filename => Relative (Full => A.Ref (Result).Unit.Get_Filename,
-                                           Base => CWD));
+            Analyze (Node     => A.Ref (Result));
          end loop;
 
          for Result of Results_2 loop
-            Analyze (Node     => A.Ref (Result),
-                     Filename => Relative (Full => A.Ref (Result).Unit.Get_Filename,
-                                           Base => CWD));
+            Analyze (Node     => A.Ref (Result));
          end loop;
 
          PP.Free (Projs);
