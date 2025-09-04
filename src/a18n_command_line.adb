@@ -23,10 +23,11 @@ is
       Define_Switch (Config, Option.Driver_Str'Access,
                      Long_Switch => "--driver=",
                      Argument    => "DRIVER",
-                     Help        => "Driver package for i18n. Default is 'Intl'");
+                     Help        => "Driver package for i18n. 'Intl' or 'L10n'. " &
+                                    "Default is 'Intl'");
       Define_Switch (Config, Option.Force'Access, "-f",
                      Long_Switch => "--force",
-                     Help        => "Force. (Overwrite output POT)");
+                     Help        => "Force. (Overwrite output POT file)");
       Define_Switch (Config, Option.Help'Access, "-h",
                      Long_Switch => "--help",
                      Help        => "Display help and exit");

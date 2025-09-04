@@ -39,4 +39,15 @@ package body A18n_Util is
       return """" & Item & """";
    end Quote;
 
+   --------------
+   -- Relative --
+   --------------
+
+   function Relative (Full : String;
+                      Base : String) return String
+   is
+   begin
+      return Ada.Strings.Fixed.Tail (Full, Full'Length - Base'Length - 1);
+   end Relative;
+
 end A18n_Util;

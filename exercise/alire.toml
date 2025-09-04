@@ -1,0 +1,15 @@
+name = "exercise"
+description = ""
+version = "0.1.0-dev"
+
+#authors = ["Jesper Quorning"]
+#maintainers = ["Jesper Quorning <jesper.quorning@gmail.com>"]
+#maintainers-logins = ["jquorning"]
+#licenses = "Apache-2.0"
+#website = ""
+#tags = []
+
+executables = ["exercise"]
+
+[[depends-on]]
+intl = "^1.0.1"
