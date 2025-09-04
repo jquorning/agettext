@@ -220,7 +220,7 @@ is
 
       elsif Last.Kind /= C.Ada_String_Literal then
          Put_Line (Standard_Error,
-                   Node.Unit.Get_Filename &
+                   Util.Relative (Node.Unit.Get_Filename, CWD.all) &
                    ":" & Fixed.Trim (Node.Sloc_Range.Start_Line'Image,   Left) &
                    ":" & Fixed.Trim (Node.Sloc_Range.Start_Column'Image, Left) &
                    ": warning: Can not translate this");
