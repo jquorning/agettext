@@ -1,0 +1,32 @@
+with "config/exercise_config.gpr";
+
+project Exercise is
+
+   for Source_Dirs use ("./", "config/");
+   for Object_Dir use "obj/" & Exercise_Config.Build_Profile;
+   for Create_Missing_Dirs use "True";
+   for Exec_Dir use ".";
+   for Main use ("exercise.adb");
+
+   package Compiler is
+
+      for Default_Switches ("Ada") use
+         Exercise_Config.Ada_Compiler_Switches & (
+            "-ffunction-sections",
+            "-fdata-sections",
+            "-O1",
+            "-gnatwa",
+            "-gnatyyM90"
+         );
+   end Compiler;
+
+   package Binder is
+      for Switches ("Ada") use ("-Es"); --  Symbolic traceback
+   end Binder;
+
+   package Linker is
+      for Switches ("Ada") use (
+         "-Wl,--gc-sections");
+   end Linker;
+
+end Exercise;
