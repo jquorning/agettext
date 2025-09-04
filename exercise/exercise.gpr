@@ -12,6 +12,7 @@ project Exercise is
 
       for Default_Switches ("Ada") use
          Exercise_Config.Ada_Compiler_Switches & (
+            "-gnatW8",    -- utf-8 source encoding
             "-ffunction-sections",
             "-fdata-sections",
             "-O1",
