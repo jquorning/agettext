@@ -2,8 +2,10 @@
 with Ada.Characters.Handling;
 with Ada.Directories;
 with Ada.Strings.Fixed;
+with Ada.Strings.Wide_Wide_Fixed;
 with Ada.Strings.Unbounded;
 with Ada.Text_IO;
+with Ada.Wide_Wide_Characters.Handling;
 
 with GNAT.Strings;
 with GNATCOLL.VFS;
@@ -31,6 +33,9 @@ is
 
    Mode : constant PP.Source_Files_Mode := PP.Root_Project;
    CWD  : GNAT.Strings.String_Access    := null;
+
+   function Get_Translators_Comment (Item : T.Text_Type)
+                                     return T.Text_Type;
 
    --------------------
    -- Find_Definiton --
@@ -230,15 +235,47 @@ is
 
       declare
          Literal : constant A.String_Literal := Last.As_String_Literal;
+         Unit    : constant A.Analysis_Unit  := Last.Unit;
+
+         Prev_Line : constant Positive :=
+           Positive (Literal.Sloc_Range.Start_Line) - 1;
+
+         Line : constant T.Text_Type := Unit.Get_Line (Prev_Line);
       begin
          POT.Put_Entry
                (Source_Name   => Util.Relative (Node.Unit.Get_Filename, CWD.all),
                 Text          => Util.Un_Quote (T.Image (Literal.Text)),
                 Line_Number   => Literal.Sloc_Range.Start_Line,
                 Column_Number => Literal.Sloc_Range.Start_Column,
-                Comment       => "");
+                Comment       => T.Image (Get_Translators_Comment (Line)));
       end;
    end Handle_Un_Op;
+
+   -----------------------------
+   -- Get_Translators_Comment --
+   -----------------------------
+
+   function Get_Translators_Comment (Item : T.Text_Type)
+                                    return T.Text_Type
+   is
+      use Ada.Strings.Wide_Wide_Fixed;
+      use Ada.Wide_Wide_Characters.Handling;
+
+      Translators   : constant Wide_Wide_String := "translators:";
+      Comment_Start : constant Natural          := Index (Item, "--");
+      Trans_Start   : constant Natural          := Index (Item, Translators,
+                                                          Mapping => To_Lower'Access);
+   begin
+      if
+        Comment_Start /= 0 and then
+        Trans_Start   /= 0 and then
+        Trans_Start > Comment_Start
+      then
+         return Trim (Item (Trans_Start + Translators'Length .. Item'Last),
+                      Side => Ada.Strings.Both);
+      end if;
+      return "";
+   end Get_Translators_Comment;
 
    -------------
    -- Analyze --
@@ -333,7 +370,8 @@ is
                                                 Env  => Env);
 
          Context  : A.Analysis_Context
-            := A.Create_Context (Unit_Provider => Provider);
+            := A.Create_Context (Unit_Provider => Provider,
+                                 With_Trivia   => True);
 
          Units : constant A.Analysis_Unit_Array
             := Project_Units (Context => Context,
