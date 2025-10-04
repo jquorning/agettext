@@ -29,7 +29,8 @@ is
 
    use Ada.Text_IO;
 
-   CWD : GNAT.Strings.String_Access := null;
+   Mode : constant PP.Source_Files_Mode := PP.Root_Project;
+   CWD  : GNAT.Strings.String_Access    := null;
 
    --------------------
    -- Find_Definiton --
@@ -81,7 +82,7 @@ is
          declare
             Sources : constant PP.Filename_Vectors.Vector
                := PP.Source_Files (Tree => Tree.all,
-                                   Mode => PP.Default);
+                                   Mode => Mode);
          begin
             for Source_US of Sources loop
                declare
@@ -114,7 +115,7 @@ is
          declare
             Sources : constant PP.Filename_Vectors.Vector
                := PP.Source_Files (Tree     => Tree.all,
-                                   Mode     => PP.Default);
+                                   Mode     => Mode);
          begin
             Count := Count + Natural (PP.Filename_Vectors.Length (Sources));
          end;
@@ -128,7 +129,7 @@ is
             declare
                Sources : constant PP.Filename_Vectors.Vector
                   := PP.Source_Files (Tree     => Tree.all,
-                                      Mode     => PP.Default);
+                                      Mode     => Mode);
             begin
                for S of Sources loop
                   Pos_U := Pos_U + 1;
