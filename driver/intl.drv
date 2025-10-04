@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<driver name="intl">
+  <author>Stephane Carrez</author>
+  <web>https://gitlab.com/stcarrez/ada-intl</web>
+  <crate>https://alire.ada.dev/crates/intl.html</crate>
+  <interface package="intl">
+    <subprogram type="function" name='gettext' arg_count="1" />
+  </interface>
+</driver>

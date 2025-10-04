@@ -16,3 +16,5 @@ executables = ["agettext"]
 
 [[depends-on]]
 libadalang = "^25.0.0"
+resources = "~0.1.0"
+xmlada = "^25.0.0"

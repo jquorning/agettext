@@ -2,7 +2,7 @@ with "config/agettext_config.gpr";
 
 project Agettext is
 
-   for Source_Dirs use ("src/", "config/");
+   for Source_Dirs use ("source/", "config/");
    for Object_Dir use "obj/" & Agettext_Config.Build_Profile;
    for Create_Missing_Dirs use "True";
    for Exec_Dir use "bin";
@@ -13,7 +13,7 @@ project Agettext is
    end Builder;
 
    package Compiler is
-      for Local_Configuration_Pragmas use "src/a18n.adc";
+      for Local_Configuration_Pragmas use "source/a18n.adc";
 
       for Default_Switches ("Ada") use
          Agettext_Config.Ada_Compiler_Switches & (
