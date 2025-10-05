@@ -404,17 +404,14 @@ is
                                                Imprecise_Fallback => False);
 
             begin
-               if Option.Verbose then
-                  Put ("Find references to " &
-                       Ada.Strings.Unbounded.To_String (Sub.Name));
-               end if;
-
                for Result of Results_1 loop
                   Analyze (Node => A.Ref (Result));
                   Count := Count + 1;
                end loop;
 
                if Option.Verbose then
+                  Put ("Find references to " &
+                       Ada.Strings.Unbounded.To_String (Sub.Name));
                   Put (":" & Natural'Image (Count));
                   New_Line;
                end if;

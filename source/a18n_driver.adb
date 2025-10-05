@@ -1,4 +1,5 @@
 
+with Ada.Characters.Handling;
 with Ada.Directories;
 with Ada.Text_IO;
 
@@ -169,8 +170,11 @@ is
    is
       use Ada.Directories;
 
+      Filename_3 : constant String :=
+        Ada.Characters.Handling.To_Lower (Driver);
+
       Filename_2 : constant String :=
-        Resource.Resource_Path & "/driver/" & Driver & ".drv";
+        Resource.Resource_Path & "/driver/" & Filename_3 & ".drv";
 
       Filename : constant String :=
         (if Exists (Filename_2)

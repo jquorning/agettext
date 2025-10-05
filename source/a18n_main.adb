@@ -1,5 +1,4 @@
 
-with Ada.Characters.Handling;
 with Ada.Directories;
 with Ada.Exceptions;
 with Ada.Text_IO;
@@ -71,7 +70,7 @@ is
       end if;
 
       Copy := Driver;
-      Driver := new String'(Ada.Characters.Handling.To_Lower (Driver.all));
+      Driver := new String'(Driver.all);
       Free (Copy);
 
       A18n_Driver.Load (Driver.all);
