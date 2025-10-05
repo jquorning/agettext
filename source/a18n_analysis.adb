@@ -163,23 +163,30 @@ is
       Assoc  : constant A.Assoc_List         := Last.As_Assoc_List;
       Params : constant A.Param_Actual_Array := Assoc.P_Zip_With_Params;
    begin
-      pragma Assert (Params'Length = 1);
+--      pragma Assert (Params'Length = 1);
 --      pragma Assert (First.Kind in C.Ada_Dotted_Name | C.Ada_String_Literal);
+      for P in 1 .. Params'Length loop
+         declare
+            Actual : constant A.Expr'Class
+               := A.Actual (Params (P));
 
-      declare
-         Actual : constant A.Expr'Class
-            := A.Actual (Params (Params'First));
-      begin
-         if Actual.Kind = C.Ada_String_Literal then
-            POT.Put_Entry
-                  (Source_Name   => Util.Relative (Node.Unit.Get_Filename, CWD.all),
-                   Text          => Util.Un_Quote (T.Image (Actual.Text)),
-                   Line_Number   => Actual.Sloc_Range.Start_Line,
-                   Column_Number => Actual.Sloc_Range.Start_Column,
-                   Comment       => "");
-         end if;
-      end;
+            Unit : constant A.Analysis_Unit := Actual.Unit;
 
+            Prev_Line : constant Positive :=
+              Positive (Actual.Sloc_Range.Start_Line) - 1;
+
+            Line : constant T.Text_Type := Unit.Get_Line (Prev_Line);
+         begin
+            if Actual.Kind = C.Ada_String_Literal then
+               POT.Put_Entry
+                     (Source_Name   => Util.Relative (Node.Unit.Get_Filename, CWD.all),
+                      Text          => Util.Un_Quote (T.Image (Actual.Text)),
+                      Line_Number   => Actual.Sloc_Range.Start_Line,
+                      Column_Number => Actual.Sloc_Range.Start_Column,
+                      Comment       => T.Image (Get_Translators_Comment (Line)));
+            end if;
+         end;
+      end loop;
    end Handle_Call_Expr;
 
    -----------------------

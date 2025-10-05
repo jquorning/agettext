@@ -4,7 +4,14 @@
   <web></web>
   <crate></crate>
   <interface package="inc_l10n">
-    <subprogram type="unary" name='"abs"' arg_count="1" />
-    <subprogram type="function" name='gettext' arg_count="1" />
+    <subprogram type="unary" name='"abs"' arg_count="1" arg_1="" />
+    <subprogram type="function" name="gettext" arg_count="1" arg_1="" />
+    <subprogram type="function" name="x_e" arg_count="1" arg_1="" />
+    <subprogram type="function" name="x_ex" arg_count="2" arg_1="" />
+    <subprogram type="function" name="x_x" arg_count="2" arg_1="" arg_2="" />
+    <subprogram type="function" name="x_n" arg_count="3" arg_1="" arg_2="" />
+    <subprogram type="function" name="esc_attr_e" arg_count="1" arg_1="" />
+    <subprogram type="function" name="esc_attr_x" arg_count="1" arg_1="" />
+    <subprogram type="function" name="x_n_noop" arg_count="2" arg_1="" arg_2="" />
   </interface>
 </driver>

@@ -13,6 +13,9 @@ package A18n_Driver is
          Name      : Ada.Strings.Unbounded.Unbounded_String;
          Kind      : Subprogram_Kind;
          Arg_Count : Natural;
+         Arg_1     : Boolean;
+         Arg_2     : Boolean;
+         Arg_3     : Boolean;
       end record;
 
    package Subprogram_Vectors is new

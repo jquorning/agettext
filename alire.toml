@@ -3,7 +3,7 @@ description = "Ada internationalization tool"
 long-description = '''
 This is an Ada pendant to `xgettext`.
 '''
-version = "0.1.0-dev"
+version = "0.2.0"
 
 authors = ["Jesper Quorning"]
 maintainers = ["Jesper Quorning <jesper.quorning@gmail.com>"]

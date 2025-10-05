@@ -68,6 +68,15 @@ is
                      elsif Key = "arg_count" then
                         Sr.Arg_Count  := Natural'Value (Value);
                         Got_Arg_Count := True;
+
+                     elsif Key = "arg_1" then
+                        Sr.Arg_1 := True;
+
+                     elsif Key = "arg_2" then
+                        Sr.Arg_2 := True;
+
+                     elsif Key = "arg_3" then
+                        Sr.Arg_3 := True;
                      end if;
                   end;
                end loop;

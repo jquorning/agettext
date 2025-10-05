@@ -4,7 +4,7 @@
   <web></web>
   <crate></crate>
   <interface package="l10n">
-    <subprogram type="unary" name='"abs"' arg_count="1" />
-    <subprogram type="function" name='gettext' arg_count="1" />
+    <subprogram type="unary" name='"abs"' arg_count="1" arg_1="" />
+    <subprogram type="function" name='gettext' arg_count="1" arg_1="" />
   </interface>
 </driver>

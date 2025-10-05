@@ -4,6 +4,6 @@
   <web>https://gitlab.com/stcarrez/ada-intl</web>
   <crate>https://alire.ada.dev/crates/intl.html</crate>
   <interface package="intl">
-    <subprogram type="function" name='gettext' arg_count="1" />
+    <subprogram type="function" name='gettext' arg_count="1" arg_1="" />
   </interface>
 </driver>
