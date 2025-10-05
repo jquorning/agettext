@@ -78,10 +78,8 @@ is
       use Ada.Strings.Fixed;
       use Ada.Strings.Unbounded;
 
-      Driver : Driv.Driver_Type'Class
-         renames Option.Drivers (Option.Used_Driver).all;
-
-      Spec_File : constant String := Driver.Package_Name & ".ads";
+      Spec_File   : constant String := Driv.Package_Name & ".ads";
+      Spec_File_2 : constant String := "/" & Spec_File;
    begin
       for PAP of Projs.all loop
          declare
@@ -93,7 +91,10 @@ is
                declare
                   Source : constant String := To_String (Source_US);
                begin
-                  if Tail (Source, Spec_File'Length) = Spec_File then
+                  if
+                     Source = Spec_File or
+                     Tail (Source, Spec_File_2'Length) = Spec_File_2
+                  then
                      return Source;
                   end if;
                end;
@@ -346,9 +347,6 @@ is
 
    procedure Analyze_Project (Project_File : String)
    is
-      Driver : Driv.Driver_Type'Class
-         renames Option.Drivers (Option.Used_Driver).all;
-
       Tree : GP.Project_Tree_Access;
       Env  : GP.Project_Environment_Access;
    begin
@@ -378,39 +376,49 @@ is
                               Tree    => Tree,
                               Projs   => Projs);
 
-         Defining_1 : constant A.Defining_Name'Class
-            := Find_Definition (Context    => Context,
-                                Filename   => Find_Driver_Package (Projs, Tree),
-                                Subprogram => Driver.Unary_Operator);
-
-         Results_1  : constant A.Ref_Result_Array
-            := Defining_1.P_Find_All_Calls (Units              => Units,
-                                            Follow_Renamings   => True,
-                                            Imprecise_Fallback => False);
-
-         Defining_2 : constant A.Defining_Name'Class
-            := Find_Definition (Context    => Context,
-                                Filename   => Find_Driver_Package (Projs, Tree),
-                                Subprogram => Driver.Regular_Function);
-
-         Results_2  : constant A.Ref_Result_Array
-            := Defining_2.P_Find_All_Calls (Units              => Units,
-                                            Follow_Renamings   => True,
-                                            Imprecise_Fallback => False);
       begin
 
          if Option.Verbose then
+            New_Line;
+            Put_Line ("Files to analyze");
+            Put_Line ("----------------");
             for U of Units loop
                Put_Line (U.Get_Filename);
             end loop;
+            New_Line;
          end if;
 
-         for Result of Results_1 loop
-            Analyze (Node     => A.Ref (Result));
-         end loop;
+         for Sub of A18n_Driver.Subprograms loop
+            declare
+               Count : Natural := 0;
 
-         for Result of Results_2 loop
-            Analyze (Node     => A.Ref (Result));
+               Defining_1 : constant A.Defining_Name'Class :=
+                  Find_Definition
+                    (Context    => Context,
+                     Filename   => Find_Driver_Package (Projs, Tree),
+                     Subprogram => Ada.Strings.Unbounded.To_String (Sub.Name));
+
+               Results_1  : constant A.Ref_Result_Array :=
+                  Defining_1.P_Find_All_Calls (Units              => Units,
+                                               Follow_Renamings   => True,
+                                               Imprecise_Fallback => False);
+
+            begin
+               if Option.Verbose then
+                  Put ("Find references to " &
+                       Ada.Strings.Unbounded.To_String (Sub.Name));
+               end if;
+
+               for Result of Results_1 loop
+                  Analyze (Node => A.Ref (Result));
+                  Count := Count + 1;
+               end loop;
+
+               if Option.Verbose then
+                  Put (":" & Natural'Image (Count));
+                  New_Line;
+               end if;
+            end;
          end loop;
 
          PP.Free (Projs);

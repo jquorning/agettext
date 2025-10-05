@@ -1,6 +1,7 @@
 
 with Ada.Characters.Handling;
 with Ada.Directories;
+with Ada.Exceptions;
 with Ada.Text_IO;
 
 with GNATCOLL.Projects;
@@ -73,16 +74,8 @@ is
       Driver := new String'(Ada.Characters.Handling.To_Lower (Driver.all));
       Free (Copy);
 
-      for A in Option.Drivers'Range loop
-         if Driver.all = Option.Drivers (A).Driver_Name then
-            Option.Used_Driver := A;
-            return;
-         end if;
-      end loop;
+      A18n_Driver.Load (Driver.all);
 
-      Put_Line (Standard_Error,
-              "Unknown i18n driver, '" & Driver.all & "'. Exiting");
-      raise Program_Termination;
    end Check_Driver;
 
    -------------------
@@ -150,6 +143,11 @@ exception
 
    when A18n_Analysis.Missing_Driver_Specification =>
       Put_Line (Standard_Error,
-                "'" & Option.Drivers (Option.Used_Driver).all.Package_Name &
+                "'" & A18n_Driver.Package_Name &
                 ".ads" & "' is not part of the project. Exiting");
+
+   when Occ : A18n_Driver.XML_Error =>
+      Put_Line (Standard_Error,
+                Ada.Exceptions.Exception_Message (Occ));
+
 end A18n_Main;
